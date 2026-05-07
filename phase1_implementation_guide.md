@@ -70,80 +70,173 @@ endclass
 ## 📊 Pair 3: M5 + M6 (Coverage, Stimulus, Integration)
 **Target Files:** `env/coverage.sv`, `sequences/stim_lib.sv`, `tb/tb_top.sv`
 
-### Final Deliverable
-The stimulus vocabulary for test writers, the functional coverage model to prove test completeness against the grading rubric, and a successfully compiling top-level testbench.
+This pair is responsible for three distinct architectural components.
 
-### Expected API Signature (Hand-off to Phase 2)
-The test writers in Phase 2 will instantiate these classes to generate random traffic and record their progress toward the 85% coverage goal:
+### 1. Stimulus Library (`stim_lib.sv`)
+
+#### Final Deliverable
+**The Goal:** Build a reusable, object-oriented library that lets test files read like plain English by hiding all the complex APB bus writes. It acts as the primary API for all mandatory test programs, abstracting away low-level APB bus timing and register packing.
+
+**Part 1: The Data Object (`spi_txn`)**
+Extend the starter class to serve as a single "fat transaction" holding both configuration settings (mode, width, divider) and data payloads. Add constraints to prevent illegal states (like reserved widths) and restrict timing variables to sane operational ranges. It also needs a function to correctly pack the bits for the 32-bit CTRL register.
+
+**Part 2: The Action Macros (`spi_sequence_lib`)**
+Create a class of purely static tasks that take `spi_txn` objects and execute the necessary sequence of APB writes/reads via the global hierarchical BFM (`tb_top.u_apb_bfm`).
+**Required Tasks:** You must write macros to: Configure the DUT, Target specific SS lanes, Push TX bursts (single & burst), Pop RX bursts, Wait for the DUT to go idle, Clear interrupts, and purposely inject bus errors.
+
+#### Expected API Signature
 ```systemverilog
-// In stim_lib.sv
 class spi_txn;
-    rand bit [1:0] mode, width;
-    rand bit lsb_first, loopback;
+    rand bit [1:0]  mode, width;
+    rand bit        lsb_first, loopback;
+    rand bit [15:0] clk_div;
+    rand bit [7:0]  delay_cfg;
+    rand bit [31:0] tx_data;
     
-    // Helper used by tests to pack the 32-bit CTRL register
-    function bit [31:0] pack_ctrl();
+    constraint c_legal_width;
+    constraint c_sane_timing;
+    
+    function bit [31:0] pack_ctrl_word();
 endclass
 
-// In coverage.sv
-class spi_coverage_col;
-    // Hooks called by tests at the end of transfers
-    function void sample_config(bit [1:0] mode, bit [1:0] width, bit lsb_first, bit loopback);
-    function void sample_clkdiv(bit [15:0] div);
-    function void sample_fifo(int tx_occ, int rx_occ);
+class spi_sequence_lib;
+    static task configure_dut(spi_txn txn);
+    static task target_ss(bit [3:0] ss_ctrl);
+    static task push_single(spi_txn txn);
+    static task push_burst(spi_txn txn_q[$]);
+    static task pop_rx_burst(output bit [31:0] rx_q[$]);
+    static task wait_idle();
+    static task clear_interrupts(output bit [31:0] int_stat);
+    static task inject_error(bit [7:0] addr, bit [31:0] data);
 endclass
 ```
 
-### Requirements Checklist
-- [ ] **Randomized Stimulus Classes:** Provide transaction classes for test writers containing constrained-random fields for all valid SPI configurations.
-- [ ] **Configuration Coverage:** Provide covergroups that hit all 24 required combinations of Mode × Width × Bit-Ordering.
-- [ ] **Corner Case Coverage:** Provide covergroups that explicitly hit the `CLK_DIV` corner values defined in grading Section 10.1 (0, 1, 2, 3, 255, 1024, 65535).
-- [ ] **FIFO Coverage:** Provide covergroups that prove the testbench has observed the FIFOs in empty, 1-entry, mid-level, 7-entry, and full states.
-- [ ] **Integration:** Instantiate and wire the expanded BFM, Reference Model, and Coverage models into the top-level testbench file.
+#### Requirements Checklist
+- [ ] **Transaction Data Class:** Provide the `spi_txn` class containing constrained-random fields for all valid SPI configurations and a `pack_ctrl_word()` method.
+- [ ] **Configuration Macro:** Write to `CLK_DIV`, `DELAY`, `INT_EN`, and `CTRL`.
+- [ ] **Targeting Macro:** Assert/de-assert Slave Select lanes via `SS_CTRL`.
+- [ ] **Transmit Macros:** Tasks for single-word pushes and burst pushes to `TX_DATA`.
+- [ ] **Receive Macro:** Poll `STATUS` and harvest data from `RX_DATA` into an output queue.
+- [ ] **Synchronization & Interrupt Macros:** Tasks to wait for `BUSY` to clear and a task to read/write-1-clear `INT_STAT`.
+- [ ] **Error Injection Macro:** Write arbitrary data to reserved register offsets.
+
+### 2. Functional Coverage (`coverage.sv`)
+
+#### Final Deliverable
+A functional coverage model to prove test completeness against the grading rubric. The test writers in Phase 2 will instantiate this to record their progress toward the 85% coverage goal.
+
+#### Expected API Signature
+```systemverilog
+class spi_coverage_col;
+    // Hooks called by tests at the end of transfers or configuration steps
+    function void sample_config(bit [1:0] mode, bit [1:0] width, bit lsb_first, bit loopback);
+    function void sample_clkdiv(bit [15:0] div);
+    function void sample_fifo(int tx_occ, int rx_occ);
+    function void sample_delay(bit [7:0] delay);
+    function void sample_interrupt(bit [4:0] int_stat, bit [4:0] int_en);
+    function void sample_ss(bit [3:0] ss_pattern);
+    function void sample_register(bit [7:0] addr, bit is_write);
+endclass
+```
+
+#### Requirements Checklist
+- [ ] **Configuration Coverage:** Provide `cg_config` to hit all 24 required combinations of SPI mode (0-3) × width (8, 16, 32) × ordering (MSB, LSB).
+- [ ] **Corner Case Coverage:** Provide `cg_clkdiv` to explicitly hit the DIV corner values: 0, 1, 2, 3, 255, 1024, 65535, and random values.
+- [ ] **FIFO Coverage:** Provide `cg_fifo` to hit TX/RX occupancy states: empty, 1, 4, 7, and full (10 total bins across 2 FIFOs).
+- [ ] **Delay Coverage:** Provide `cg_delay` to hit inter-transfer delays of 0, 1, and ≥128.
+- [ ] **Interrupt Coverage:** Provide `cg_interrupt` to hit the 32 combination bins for the 5 interrupt source states.
+- [ ] **Loopback Coverage:** Provide `cg_loopback` to hit loopback on/off states.
+- [ ] **Slave Select Coverage:** Provide `cg_ss` to cover all slave select patterns (which SS_n lanes are asserted, including multi-slave scenarios).
+- [ ] **Register Access Coverage:** Provide `cg_register` tracking read/write hits on all 9 registers plus reserved offsets.
+
+### 3. Top-Level Integration (`tb_top.sv`)
+
+#### Final Deliverable
+A successfully compiling top-level testbench that wires the expanded BFM, Reference Model, Coverage models together, and can dynamically dispatch required tests based on arguments.
+
+#### Expected API Signature
+*(No specific external API required; this is the top-level testbench module executed by the simulator).*
+
+#### Requirements Checklist
+- [ ] **Integration:** Instantiate and wire the expanded APB BFM, SPI BFM, Reference Model, and Coverage models into the `tb_top` module.
 - [ ] **Test Dispatcher:** Implement the logic in `tb_top.sv` that selects and executes the correct test sequence based on the `+TESTNAME=` simulator argument.
 - [ ] **Compilation:** Maintain the Makefile to ensure that all new files compile cleanly without errors.
 
 ---
 
 ## 🛡️ M7 (SVA & Assertions)
-**Target File:** `assertions/spi_sva.sv`
+**Target Files:** `assertions/spi_sva.sv`, `assertions/spi_regfile_sva.sv`, `assertions/spi_core_sva.sv`
 
-> [!NOTE]
-> **Architectural Context: The RTL Split (`apb_regfile` vs `spi_core`)**
-> The DUT is structured as a thin top-level module (`spi_master`) that instantiates two clearly bounded sub-blocks (per Section 2 of the spec). This separation of concerns is a crucial digital design pattern:
-> - **`apb_regfile` (The Bus Domain):** The "brain" of the system. It isolates the standard AMBA bus protocol from the custom SPI logic. It contains the APB slave logic, all 9 registers, IRQ aggregation, and the TX/RX FIFOs. If this IP were moved to an AXI4-Lite bus, only this file would change.
-> - **`spi_core` (The Protocol Domain):** The "muscle" of the system. It knows nothing about APB; it only takes stable commands from the register block. It contains the Shift FSM (IDLE/SHIFT/DELAY), SCLK divider, bit-ordering logic, and loopback mux. This keeps the timing-critical state machine clean and focused solely on the SPI protocol.
-> 
-> Keep this separation in mind, especially when creating your SystemVerilog Assertions (M7), as properties should be bound to the specific domain they verify.
+### Module Setup & Signal Tapping
+To keep things simple and organized, the assertion environment is split into two files that match the hardware:
+- **`spi_regfile_sva.sv`**: Put assertions related to the APB bus, registers, and FIFOs here.
+- **`spi_core_sva.sv`**: Put assertions related to the SPI protocol (SCLK, MOSI, MISO) here.
+- **`spi_sva.sv` (The Wrapper)**: This file combines both modules and is already bound to the DUT in `tb_top.sv`.
+
+**Your main integration task:** The skeleton files don't have all the ports you will need. When you write an assertion that needs an internal hardware signal (like a FIFO pointer or an internal state), just add that signal as a port to your SVA module and pass it up through the `spi_sva.sv` wrapper. **Do not modify `tb_top.sv` yourself.** Instead, coordinate with M6 (Integration) to update the `bind` statement in `tb_top.sv` to tap the required signals.
 
 ### Final Deliverable
-A comprehensive suite of concurrent SystemVerilog Assertions bound directly to the DUT's internal interfaces to continuously monitor protocol compliance and design rules.
+A comprehensive suite of concurrent SystemVerilog Assertions bound directly to the DUT's internal interfaces to continuously monitor APB protocol compliance, SPI state behaviors, FIFO limits, and interrupt logic rules. The assertions must specifically target 100% pass rate on the golden RTL.
 
 ### Expected API Signature (Hand-off to Phase 2 Integration)
-M6 (Integration) will need these exact module signatures to exist so they can successfully `bind` them to the DUT in `tb_top.sv`:
+M6 (Integration) will need these exact module signatures (plus whatever internal taps M7 decides to add) to exist so they can successfully `bind` them to the DUT in `tb_top.sv`:
+
 ```systemverilog
-module spi_sva_apb (
+// In spi_sva.sv (Wrapper)
+module spi_sva(
+    // ... APB, SPI, and tapped internal signals ...
+);
+    spi_regfile_sva u_regfile_sva (/* ... */);
+    spi_core_sva u_core_sva (/* ... */);
+endmodule
+
+// In spi_regfile_sva.sv
+module spi_regfile_sva (
     input logic PCLK, PRESETn,
     input logic PSEL, PENABLE, PREADY, PSLVERR,
-    input logic [31:0] INT_STAT, INT_EN,
-    input logic IRQ
-    // (Add any necessary internal FIFO pointers here)
+    input logic IRQ,
+    input logic ctrl_en,
+    input logic [4:0] INT_STAT, INT_EN
+    // + Add required internal taps like FIFO pointers
 );
+    // Assertions related to `apb_regfile` inside here
+endmodule
 
-module spi_sva_core (
-    input logic PCLK, PRESETn,
-    input logic SCLK, MOSI, MISO, 
-    input logic [3:0] SS_n,
-    input logic BUSY, CTRL_EN
+// In spi_core_sva.sv
+module spi_core_sva (
+    input logic clk, rst_n,
+    input logic sclk, mosi, cpol, cpha,
+    input logic [3:0] ss_n
+    // + Add required internal taps like FSM states
 );
+    // Assertions related to `spi_core` inside here
+endmodule
 ```
 
 ### Requirements Checklist
-- [ ] **Binding Strategy:** Apply the assertions correctly across the `u_regfile` and `u_core` module boundaries.
-- [ ] **APB Protocol Compliance:** Assert that the APB bus exhibits zero-wait-state behavior (`PREADY` must be 1 during access) and is free of slave errors (`PSLVERR` must be 0).
-- [ ] **SPI Polarity Compliance:** Assert that the `SCLK` line rests at the correct `CPOL` level whenever the master is not actively shifting bits.
-- [ ] **SPI Timing Compliance:** Assert that the `MOSI` line is stable throughout the entire clock cycle of the sample edge.
-- [ ] **SPI Transfer Length:** Assert that a transfer lasts for exactly the programmed `WIDTH` number of SCLK cycles.
-- [ ] **Internal Safety Bounds:** Assert that the internal hardware FIFO pointers never drop below 0 or exceed their maximum depth of 8.
-- [ ] **IRQ Combinatorial Logic:** Assert that the physical `IRQ` pin always combinatorially matches the aggregated state of the masked interrupts.
-- [ ] **W1C Race Condition:** Assert that the hardware correctly preserves a status flag if a W1C clear operation overlaps with a hardware set event.
+
+#### 1. Mandatory Assertions (Section 10.2)
+These are strictly required graded assertions. If they overlap with the Verification Plan, the requirement ID is included.
+
+*For `assertions/spi_regfile_sva.sv` (Bound to `u_regfile`)*
+- [ ] **`a_apb_psel_2clk`:** `PSEL=1` for at least 2 `PCLK` to complete a transaction.
+- [ ] **`a_apb_penable`:** `PENABLE` must only assert while `PSEL=1`.
+- [ ] **`a_apb_stable_bus`:** `PADDR`, `PWRITE`, `PWDATA` stable from SETUP to ACCESS of the same transaction.
+- [ ] **`a_fifo_no_push_full` (Req R13):** No push when full (after OVF clear) without explicit OVF assertion.
+- [ ] **`a_irq_agg` (Req R16):** `IRQ == |(INT_STAT & INT_EN)` every `PCLK` (combinational assertion).
+
+*For `assertions/spi_core_sva.sv` (Bound to `u_core`)*
+- [ ] **`a_sclk_idle` (Req R4):** `SCLK` idle level matches `CPOL` whenever not transferring (`BUSY=0`).
+- [ ] **`a_mosi_stable` (Req R5):** `MOSI` stable for at least 1 `PCLK` around each sample edge (WIRE-STABILITY).
+- [ ] **`a_ss_stable` (Req R20):** `SS_n` held asserted for the entire `WIDTH`-bit transfer.
+
+#### 2. Extra Assertions (Verification Plan)
+These are additional specific checks identified in the Verification Plan document to ensure robustness. **Note:** This list is not exhaustive. Read the specification PDF to identify and implement additional assertions that strengthen protocol and design rule coverage.
+
+*For `assertions/spi_regfile_sva.sv` (Bound to `u_regfile`)*
+- [ ] **`a_apb_zero_ws` (Req R22):** Check that `PREADY` always equals 1 (zero wait states).
+- [ ] **`a_fifo_bounds` (Req R11, R12):** Ensure TX and RX FIFO pointers never exceed depth of 8.
+- [ ] **`a_w1c_race` (Req R18):** Verify that a W1C write plus a simultaneous hardware event keeps the bit set.
+
+*For `assertions/spi_core_sva.sv` (Bound to `u_core`)*
+- [ ] **`a_xfer_length` (Req R7):** Verify that a transfer takes exactly `WIDTH` SCLK cycles.
