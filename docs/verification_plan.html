@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Verification Plan — SPI Master Controller</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Inter',sans-serif; font-size:11pt; color:#1a1a2e; line-height:1.6; padding:40px 60px; }
+  @media print { body { padding:20px 40px; } h2 { page-break-before: auto; } .section { page-break-inside:avoid; } }
+  h1 { font-size:22pt; color:#0f3460; border-bottom:3px solid #0f3460; padding-bottom:8px; margin-bottom:6px; }
+  h2 { font-size:16pt; color:#16213e; margin-top:28px; margin-bottom:10px; border-left:4px solid #e94560; padding-left:10px; }
+  h3 { font-size:12pt; color:#0f3460; margin-top:16px; margin-bottom:6px; }
+  p, li { margin-bottom:4px; }
+  ul, ol { margin-left:20px; }
+  table { width:100%; border-collapse:collapse; margin:12px 0; font-size:10pt; }
+  th { background:#0f3460; color:#fff; padding:8px 10px; text-align:left; font-weight:600; }
+  td { padding:6px 10px; border:1px solid #ccc; vertical-align:top; }
+  tr:nth-child(even) td { background:#f4f6fb; }
+  .cover { text-align:center; padding:100px 0 60px; page-break-after:always; }
+  .cover h1 { border:none; font-size:28pt; margin-bottom:10px; }
+  .cover .subtitle { font-size:14pt; color:#555; margin-bottom:40px; }
+  .cover .meta { font-size:11pt; color:#333; line-height:2; }
+  .req { font-family:monospace; background:#eef; padding:1px 4px; border-radius:2px; font-size:9pt; }
+  code { background:#f0f0f0; padding:1px 4px; border-radius:3px; font-size:10pt; }
+  .footer { margin-top:40px; border-top:1px solid #ccc; padding-top:8px; font-size:9pt; color:#888; text-align:center; }
+</style>
+</head>
+<body>
+
+<!-- COVER PAGE -->
+<div class="cover">
+  <h1>Verification Plan</h1>
+  <div class="subtitle">SPI Master Controller — Digital Design Verification</div>
+  <div class="subtitle">Spring 2026 Final Project</div>
+  <div class="meta">
+    <strong>Document Version:</strong> 1.0<br>
+    <strong>Date:</strong> May 6, 2026<br>
+    <strong>DUT:</strong> spi_master (Rev 1.1) — APB v2.0 Slave + SPI Master<br>
+    <strong>Methodology:</strong> SystemVerilog (Plain SV)<br>
+    <strong>Simulator:</strong> QuestaSim<br>
+  </div>
+</div>
+
+<!-- TABLE OF CONTENTS -->
+<h2>Table of Contents</h2>
+<ol>
+  <li>Introduction</li>
+  <li>Verification Environment</li>
+  <li>Features to be Verified</li>
+  <li>Test Plan (Summary)</li>
+  <li>Coverage Plan</li>
+  <li>Assertion Plan (SVA)</li>
+  <li>Bug Tracking Methodology</li>
+  <li>Sign-off Criteria</li>
+</ol>
+
+<!-- SECTION 1 -->
+<h2>1. Introduction</h2>
+
+<h3>1.1 Design Description</h3>
+<p>The design under verification is an <strong>SPI Master Controller</strong> — a synthesizable IP block implementing an industry-standard Serial Peripheral Interface (SPI) master. The controller features a 32-bit AMBA APB v2.0 slave interface for configuration and data access. It supports all four SPI modes, programmable transfer widths (8, 16, or 32 bits), and up to four independent active-low slave selects.</p>
+
+<h3>1.2 Verification Goals</h3>
+<ul>
+  <li>Verify all functionality outlined in numbered requirements <span class="req">R1</span>–<span class="req">R25</span>.</li>
+  <li>Achieve a minimum of <strong>85% functional coverage</strong> on the golden RTL.</li>
+  <li>Implement all mandatory SystemVerilog Assertions (SVA).</li>
+  <li>Detect all grader-injected bugs within a strict regression budget of <strong>10,000 simulation invocations</strong>.</li>
+</ul>
+
+<!-- SECTION 2 -->
+<h2>2. Verification Environment</h2>
+
+<h3>2.1 Simulation Environment</h3>
+<p>The environment is a single-clock, synchronous simulation driven by the PCLK APB clock, which also serves as the system clock for SPI logic. The environment interacts with the thin top-level module <code>spi_master</code> via the <code>dut_wrapper</code>, utilizing guaranteed internal hierarchical names (<code>dut_wrapper.u_dut.u_regfile</code> and <code>dut_wrapper.u_dut.u_core</code>) for backdoor reads and SVA bind points. An active-low asynchronous reset (<code>PRESETn</code>) requires minimum 2 PCLK cycles of assertion.</p>
+
+<h3>2.2 Component Architecture</h3>
+<table>
+  <tr><th>Component</th><th>Type</th><th>Responsibility</th></tr>
+  <tr><td>APB Master BFM</td><td>Module with tasks</td><td>Drives PSEL, PENABLE, PWRITE, PADDR, PWDATA to configure and access the DUT registers.</td></tr>
+  <tr><td>SPI Slave BFM</td><td>Module</td><td>Connects to SCLK, MOSI, MISO, SS_n to emulate a downstream SPI peripheral. Drives MISO and captures MOSI.</td></tr>
+  <tr><td>Reference Model</td><td>SV Class</td><td>Golden predictor for register state, FIFO contents, SPI transfer results, and interrupt behavior.</td></tr>
+  <tr><td>Scoreboard</td><td>Integrated in ref_model</td><td>Compares predicted vs. observed values; emits <code>[SCOREBOARD_ERROR]</code> on mismatch.</td></tr>
+  <tr><td>Coverage Collector</td><td>SV Class with covergroups</td><td>Samples functional coverage bins for modes, widths, dividers, FIFO states, interrupts, and delays.</td></tr>
+  <tr><td>SVA Checker</td><td>Bound module</td><td>Continuous protocol and timing assertions bound to <code>u_regfile</code> and <code>u_core</code>.</td></tr>
+</table>
+
+<h3>2.3 Simulation Flow</h3>
+<table>
+  <tr><th>Phase</th><th>Description</th></tr>
+  <tr><td><strong>Reset</strong></td><td>Drive PRESETn low for ≥2 PCLK cycles; verify SCLK at CPOL=0 idle level; verify registers return to reset values.</td></tr>
+  <tr><td><strong>Configuration</strong></td><td>APB Master writes CTRL, CLK_DIV, INT_EN to establish SPI mode, transfer width, and clock rate.</td></tr>
+  <tr><td><strong>Stimulus</strong></td><td>APB Master pushes data to TX_DATA and configures SS_CTRL to begin transfers; SPI Slave BFM reacts to SCLK and MOSI.</td></tr>
+  <tr><td><strong>Checking</strong></td><td>Data read from RX_DATA compared against expected slave responses; IRQ generation verified against status flags.</td></tr>
+</table>
+
+<!-- SECTION 3 -->
+<h2>3. Features to be Verified</h2>
+
+<table>
+  <tr><th>Feature</th><th>Reqs</th><th>Expected Behavior</th></tr>
+  <tr><td>APB Slave Interface</td><td><span class="req">R1</span> <span class="req">R2</span></td><td>Zero-wait-state register access. Reads/writes return exactly the last written value (masked by RO bits). Reserved offsets (0x24+) read 0 and ignore writes.</td></tr>
+  <tr><td>Master Enable/Reset</td><td><span class="req">R3</span></td><td>CTRL.EN=0 holds shifter and FIFOs in reset, keeps SCLK at CPOL idle level. SS_n follows SS_CTRL combinationally.</td></tr>
+  <tr><td>SPI Protocol (4 modes)</td><td><span class="req">R4</span> <span class="req">R5</span></td><td>SCLK idle polarity matches CPOL. MOSI stable across the sample edge defined by CPOL/CPHA.</td></tr>
+  <tr><td>Transfer Width &amp; Ordering</td><td><span class="req">R6</span> <span class="req">R7</span></td><td>8, 16, or 32 bits per transfer. MSB-first or LSB-first ordering.</td></tr>
+  <tr><td>Clock Generation</td><td><span class="req">R8</span></td><td>SCLK frequency = PCLK/(2×(DIV+1)). DIV sampled at transfer start and held for duration.</td></tr>
+  <tr><td>TX FIFO (8-deep)</td><td><span class="req">R9</span> <span class="req">R10</span> <span class="req">R13</span></td><td>TX_FULL at 8 entries. Writes to full FIFO discarded; TX_OVF flag set.</td></tr>
+  <tr><td>RX FIFO (8-deep)</td><td><span class="req">R11</span> <span class="req">R12</span> <span class="req">R14</span> <span class="req">R15</span></td><td>RX_FULL at 8 entries. Receives to full FIFO discarded; RX_OVF flag set. Empty reads return 0.</td></tr>
+  <tr><td>Interrupt Controller</td><td><span class="req">R16</span> <span class="req">R17</span> <span class="req">R18</span></td><td>5 maskable sources. IRQ = |(INT_STAT &amp; INT_EN). W1C race preserves new hardware event on same cycle.</td></tr>
+  <tr><td>Loopback Mode</td><td><span class="req">R19</span></td><td>MOSI internally routed to RX shift register. External MISO ignored.</td></tr>
+  <tr><td>Slave Select</td><td><span class="req">R20</span></td><td>SS_n[i] = !SS_EN[i] | SS_VAL[i]. IP does NOT toggle SS_n autonomously during transfers.</td></tr>
+  <tr><td>Inter-Transfer Delay</td><td><span class="req">R21</span></td><td>Inserts exact DELAY half-cycles of idle SCLK between consecutive transfers.</td></tr>
+  <tr><td>Reserved Registers</td><td><span class="req">R22</span> <span class="req">R23</span></td><td>Offsets 0x24+ return 0 on read and ignore writes.</td></tr>
+  <tr><td>Clock Divider Corners</td><td><span class="req">R24</span> <span class="req">R25</span></td><td>DIV=0 yields PCLK/2 safely. DIV=65535 yields minimum SCLK frequency.</td></tr>
+</table>
+
+<!-- SECTION 4 -->
+<h2>4. Test Plan (Summary)</h2>
+<p><em>Full details are in the companion <strong>Test Plan</strong> document (test_plan.pdf).</em></p>
+
+<table>
+  <tr><th>#</th><th>Test Name</th><th>Requirements Covered</th><th>Category</th></tr>
+  <tr><td>1</td><td><code>sanity_test</code></td><td>R1–R7</td><td>Smoke</td></tr>
+  <tr><td>2</td><td><code>reg_access_test</code></td><td>R1, R2</td><td>Register Interface</td></tr>
+  <tr><td>3</td><td><code>mode_coverage_test</code></td><td>R4, R5, R6, R7</td><td>SPI Protocol</td></tr>
+  <tr><td>4</td><td><code>width_coverage_test</code></td><td>R6, R7</td><td>Data Path</td></tr>
+  <tr><td>5</td><td><code>fifo_stress_test</code></td><td>R9, R10, R11, R12</td><td>FIFO Management</td></tr>
+  <tr><td>6</td><td><code>interrupt_test</code></td><td>R16, R17, R18</td><td>Interrupt Controller</td></tr>
+  <tr><td>7</td><td><code>clk_div_corner_test</code></td><td>R8, R24, R25</td><td>Clock Generation</td></tr>
+  <tr><td>8</td><td><code>loopback_test</code></td><td>R19</td><td>Advanced Mode</td></tr>
+  <tr><td>9</td><td><code>delay_transfer_test</code></td><td>R21</td><td>Timing</td></tr>
+  <tr><td>10</td><td><code>error_injection_test</code></td><td>R13, R14, R15, R23</td><td>Robustness</td></tr>
+</table>
+
+<!-- SECTION 5 -->
+<h2>5. Coverage Plan</h2>
+
+<h3>5.1 Functional Coverage (Target: ≥ 85%)</h3>
+<table>
+  <tr><th>Covergroup</th><th>Coverpoints / Bins</th><th>Count</th></tr>
+  <tr><td><code>cg_config</code></td><td>SPI mode (0–3) × width (8,16,32) × ordering (MSB,LSB)</td><td>24 cross bins</td></tr>
+  <tr><td><code>cg_clkdiv</code></td><td>DIV values: 0, 1, 2, 3, 255, 1024, 65535, random</td><td>8 bins</td></tr>
+  <tr><td><code>cg_fifo</code></td><td>TX/RX occupancy: empty, 1, 4, 7, full (×2 FIFOs)</td><td>10 bins</td></tr>
+  <tr><td><code>cg_delay</code></td><td>DELAY: 0, 1, ≥128</td><td>3 bins</td></tr>
+  <tr><td><code>cg_interrupt</code></td><td>5 interrupt source states (asserted/cleared)</td><td>32 combination bins</td></tr>
+  <tr><td><code>cg_loopback</code></td><td>Loopback on/off</td><td>2 bins</td></tr>
+  <tr><td><code>cg_ss</code></td><td>Slave select patterns (which SS_n lines asserted)</td><td>4+ bins</td></tr>
+  <tr><td><code>cg_register</code></td><td>Read/write hits on all 9 registers + reserved offsets</td><td>10+ bins</td></tr>
+</table>
+
+<h3>5.2 Code Coverage</h3>
+<p>Standard metrics: Line, Toggle, and FSM State/Transition coverage measured across the <code>spi_master</code> hierarchy. Target: ≥ 85% on golden RTL.</p>
+
+<!-- SECTION 6 -->
+<h2>6. Assertion Plan (SVA)</h2>
+<p>All assertions are implemented in <code>assertions/spi_sva.sv</code> and bound into the DUT via <code>bind</code> statements. Target: 100% pass rate.</p>
+
+<table>
+  <tr><th>Assertion ID</th><th>Bind Target</th><th>Property Checked</th><th>Req</th></tr>
+  <tr><td><code>a_irq_agg</code></td><td><code>u_regfile</code></td><td>IRQ == |(INT_STAT &amp; INT_EN) every cycle</td><td>R18</td></tr>
+  <tr><td><code>a_apb_penable</code></td><td><code>u_regfile</code></td><td>PENABLE asserts only while PSEL=1</td><td>R1</td></tr>
+  <tr><td><code>a_apb_zero_ws</code></td><td><code>u_regfile</code></td><td>PREADY always=1 (zero wait states)</td><td>R1</td></tr>
+  <tr><td><code>a_sclk_idle</code></td><td><code>u_core</code></td><td>SCLK == CPOL when not transferring</td><td>R4</td></tr>
+  <tr><td><code>a_mosi_stable</code></td><td><code>u_core</code></td><td>MOSI stable across the sample edge</td><td>R5</td></tr>
+  <tr><td><code>a_fifo_bounds</code></td><td><code>u_regfile</code></td><td>FIFO pointer never exceeds depth of 8</td><td>R9, R11</td></tr>
+  <tr><td><code>a_ss_stable</code></td><td><code>u_core</code></td><td>SS_n does not toggle autonomously during a transfer</td><td>R20</td></tr>
+  <tr><td><code>a_xfer_length</code></td><td><code>u_core</code></td><td>Transfer takes exactly WIDTH SCLK cycles</td><td>R6</td></tr>
+  <tr><td><code>a_w1c_race</code></td><td><code>u_regfile</code></td><td>W1C + simultaneous hardware event → bit stays set</td><td>R17</td></tr>
+</table>
+
+<!-- SECTION 7 -->
+<h2>7. Bug Tracking Methodology</h2>
+
+<h3>7.1 Detection</h3>
+<p>Bugs are identified during regression by comparing actuals against the specification (R1–R25). Failures are detected via <code>[SCOREBOARD_ERROR]</code>, <code>[ASSERTION_ERROR]</code>, and <code>[CHECKER_ERROR]</code> log lines.</p>
+
+<h3>7.2 Reporting Format</h3>
+<table>
+  <tr><th>Field</th><th>Description</th></tr>
+  <tr><td>Bug ID / Title</td><td>Unique identifier and brief summary</td></tr>
+  <tr><td>Violated Requirement</td><td>Specific requirement ID (e.g., R13)</td></tr>
+  <tr><td>Steps to Reproduce</td><td>Exact APB access sequence triggering the failure</td></tr>
+  <tr><td>Expected vs. Actual</td><td>Golden RTL baseline vs. observed buggy behavior</td></tr>
+  <tr><td>Evidence</td><td>Waveform snippet or log excerpt</td></tr>
+</table>
+
+<h3>7.3 Severity Levels</h3>
+<table>
+  <tr><th>Severity</th><th>Definition</th><th>Example</th></tr>
+  <tr><td><strong>Critical</strong></td><td>Blocks basic APB configuration or causes simulation crashes</td><td>PREADY stuck low</td></tr>
+  <tr><td><strong>High</strong></td><td>Direct violation of SPI protocol timings or FIFO corruption</td><td>Wrong SCLK polarity in mode 2</td></tr>
+  <tr><td><strong>Medium</strong></td><td>Edge-case failures</td><td>W1C race drops an event</td></tr>
+  <tr><td><strong>Low</strong></td><td>Non-functional or cosmetic issues</td><td>Reserved register returns non-zero</td></tr>
+</table>
+
+<!-- SECTION 8 -->
+<h2>8. Sign-off Criteria</h2>
+
+<h3>8.1 Verification Complete When:</h3>
+<ul>
+  <li>Functional coverage ≥ 85% across all defined bins on golden RTL.</li>
+  <li>All mandatory SVA checks are active and reporting zero failures.</li>
+  <li>Every requirement R1–R25 is covered by at least one test, one coverage bin, or one assertion.</li>
+</ul>
+
+<h3>8.2 Design Ready When:</h3>
+<ul>
+  <li>All grader-injected bugs have been detected and documented.</li>
+  <li>No reliance on illegal sequences (e.g., CTRL.WIDTH=2'b11 or changing CLK_DIV while BUSY=1).</li>
+</ul>
+
+<h3>8.3 Closure Process</h3>
+<p>Run the complete test suite. The entire regression must close all coverage goals and detect all required bugs using no more than <strong>10,000 total simulation invocations</strong> (current budget: 10 tests × 20 seeds = 200 runs).</p>
+
+<div class="footer">
+  SPI Master Controller — Verification Plan v1.0 — Spring 2026
+</div>
+
+</body>
+</html>

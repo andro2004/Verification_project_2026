@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Test Plan — SPI Master Controller</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Inter',sans-serif; font-size:11pt; color:#1a1a2e; line-height:1.6; padding:40px 60px; }
+  @media print { body { padding:20px 40px; } }
+  h1 { font-size:22pt; color:#0f3460; border-bottom:3px solid #0f3460; padding-bottom:8px; margin-bottom:6px; }
+  h2 { font-size:16pt; color:#16213e; margin-top:28px; margin-bottom:10px; border-left:4px solid #e94560; padding-left:10px; }
+  h3 { font-size:12pt; color:#0f3460; margin-top:18px; margin-bottom:6px; }
+  p, li { margin-bottom:4px; }
+  ul { margin-left:20px; }
+  table { width:100%; border-collapse:collapse; margin:12px 0; font-size:10pt; }
+  th { background:#0f3460; color:#fff; padding:8px 10px; text-align:left; font-weight:600; }
+  td { padding:6px 10px; border:1px solid #ccc; vertical-align:top; }
+  tr:nth-child(even) td { background:#f4f6fb; }
+  .cover { text-align:center; padding:100px 0 60px; page-break-after:always; }
+  .cover h1 { border:none; font-size:28pt; margin-bottom:10px; }
+  .cover .subtitle { font-size:14pt; color:#555; margin-bottom:40px; }
+  .cover .meta { font-size:11pt; color:#333; line-height:2; }
+  .tag { display:inline-block; background:#e94560; color:#fff; font-size:8pt; padding:1px 6px; border-radius:3px; font-weight:600; }
+  .tag.green { background:#27ae60; }
+  .tag.orange { background:#e67e22; }
+  .section { page-break-inside:avoid; }
+  .req { font-family:monospace; background:#eef; padding:1px 4px; border-radius:2px; font-size:9pt; }
+  .footer { margin-top:40px; border-top:1px solid #ccc; padding-top:8px; font-size:9pt; color:#888; text-align:center; }
+</style>
+</head>
+<body>
+
+<!-- COVER PAGE -->
+<div class="cover">
+  <h1>Test Plan</h1>
+  <div class="subtitle">SPI Master Controller — Digital Design Verification</div>
+  <div class="subtitle">Spring 2026 Final Project</div>
+  <div class="meta">
+    <strong>Document Version:</strong> 1.0<br>
+    <strong>Date:</strong> May 6, 2026<br>
+    <strong>Methodology:</strong> SystemVerilog (Plain SV)<br>
+    <strong>Simulator:</strong> QuestaSim<br>
+  </div>
+</div>
+
+<!-- TABLE OF CONTENTS -->
+<h2>Table of Contents</h2>
+<ol>
+  <li>Introduction</li>
+  <li>Test Environment Overview</li>
+  <li>Test Case Summary</li>
+  <li>Detailed Test Cases (TC-01 through TC-10)</li>
+  <li>Regression Strategy</li>
+  <li>Pass/Fail Criteria &amp; Log Contract</li>
+</ol>
+
+<h2>1. Introduction</h2>
+<p>This document defines the test plan for verifying the SPI Master Controller IP. The plan maps directly to the 10 mandatory test names required by the grading interface contract (Section 3) and covers functional requirements R1–R25 from the design specification.</p>
+<p>Each test case specifies its purpose, targeted requirements, stimulus strategy, expected results, and pass/fail criteria. Tests are dispatched via <code>+TESTNAME=&lt;name&gt;</code> from the <code>tb_top</code> module and follow the class-based <code>static task run()</code> pattern.</p>
+
+<h2>2. Test Environment Overview</h2>
+<table>
+  <tr><th>Component</th><th>File</th><th>Role</th></tr>
+  <tr><td>Top-level module</td><td><code>tb/tb_top.sv</code></td><td>Clock/reset gen, DUT wrapper, BFM instances, test dispatcher</td></tr>
+  <tr><td>APB Master BFM</td><td><code>tb/apb_master_bfm.sv</code></td><td>Drives APB read/write transactions to configure &amp; access the DUT</td></tr>
+  <tr><td>SPI Slave BFM</td><td><code>tb/spi_slave_bfm.sv</code></td><td>Emulates downstream SPI slave; drives MISO, captures MOSI</td></tr>
+  <tr><td>Reference Model</td><td><code>env/ref_model.sv</code></td><td>Golden predictor for registers, FIFOs, SPI data, and interrupts</td></tr>
+  <tr><td>Coverage Collector</td><td><code>env/coverage.sv</code></td><td>Functional covergroups (mode, width, div, FIFO, IRQ, delay)</td></tr>
+  <tr><td>Stimulus Library</td><td><code>sequences/stim_lib.sv</code></td><td>Randomisable transaction classes with constraints</td></tr>
+  <tr><td>SVA Assertions</td><td><code>assertions/spi_sva.sv</code></td><td>Bound to DUT internals for continuous protocol checking</td></tr>
+</table>
+
+<h2>3. Test Case Summary</h2>
+<table>
+  <tr>
+    <th>#</th><th>Test Name</th><th>Requirements</th><th>Category</th>
+  </tr>
+  <tr><td>1</td><td><code>sanity_test</code></td><td>R1–R7</td><td>Smoke / Connectivity</td></tr>
+  <tr><td>2</td><td><code>reg_access_test</code></td><td>R1, R2</td><td>Register Interface</td></tr>
+  <tr><td>3</td><td><code>mode_coverage_test</code></td><td>R4, R5, R6, R7</td><td>SPI Protocol</td></tr>
+  <tr><td>4</td><td><code>width_coverage_test</code></td><td>R6, R7</td><td>Data Path</td></tr>
+  <tr><td>5</td><td><code>fifo_stress_test</code></td><td>R9, R10, R11, R12</td><td>FIFO Management</td></tr>
+  <tr><td>6</td><td><code>interrupt_test</code></td><td>R16, R17, R18</td><td>Interrupt Controller</td></tr>
+  <tr><td>7</td><td><code>clk_div_corner_test</code></td><td>R8, R24, R25</td><td>Clock Generation</td></tr>
+  <tr><td>8</td><td><code>loopback_test</code></td><td>R19</td><td>Advanced Mode</td></tr>
+  <tr><td>9</td><td><code>delay_transfer_test</code></td><td>R21</td><td>Timing / Delay</td></tr>
+  <tr><td>10</td><td><code>error_injection_test</code></td><td>R13, R14, R15, R23</td><td>Robustness</td></tr>
+</table>
+
+<h2>4. Detailed Test Cases</h2>
+
+<!-- TC-01 -->
+<div class="section">
+<h3>TC-01: <code>sanity_test</code></h3>
+<table>
+  <tr><td style="width:160px"><strong>Purpose</strong></td><td>Verify the most basic operational sequence to ensure the testbench and DUT are alive and connected.</td></tr>
+  <tr><td><strong>Requirements</strong></td><td><span class="req">R1–R7</span></td></tr>
+  <tr><td><strong>Scope</strong></td><td>Enable the controller, execute a single byte (8-bit) transfer in SPI Mode 0, and verify the received data.</td></tr>
+  <tr><td><strong>Stimulus</strong></td><td>
+    1. Assert PRESETn low for ≥2 PCLK cycles, then release.<br>
+    2. Write CTRL = 0x03 (EN=1, MSTR=1, Mode 0, MSB-first, 8-bit).<br>
+    3. Write CLK_DIV = 0x04.<br>
+    4. Write TX_DATA = 0x5A; assert SS_CTRL = 0x01.<br>
+    5. Poll STATUS.BUSY until deasserted.<br>
+    6. Read RX_DATA.
+  </td></tr>
+  <tr><td><strong>Expected Results</strong></td><td>SCLK idles low; data shifts correctly; RX_DATA matches the expected slave response (0xA5 from the BFM pattern).</td></tr>
+  <tr><td><strong>Pass/Fail</strong></td><td><span class="tag green">Pass</span> if single byte transmitted and received correctly. <span class="tag">Fail</span> if the transaction hangs or data is corrupted.</td></tr>
+</table>
+</div>
+
+<!-- TC-02 -->
+<div class="section">
+<h3>TC-02: <code>reg_access_test</code></h3>
+<table>
+  <tr><td style="width:160px"><strong>Purpose</strong></td><td>Verify the APB slave interface reliability and reset behavior.</td></tr>
+  <tr><td><strong>Requirements</strong></td><td><span class="req">R1</span> <span class="req">R2</span></td></tr>
+  <tr><td><strong>Scope</strong></td><td>Check reset values for all 9 registers, followed by a write-read sequence for every R/W register.</td></tr>
+  <tr><td><strong>Stimulus</strong></td><td>
+    1. After reset, read all 9 registers and compare to spec defaults.<br>
+    2. Write a known pattern to each R/W register (CTRL, TX_DATA, CLK_DIV, SS_CTRL, INT_EN, DELAY).<br>
+    3. Read back and verify masked values.<br>
+    4. Write to reserved offsets (0x24, 0x28, …), read back → must return 0.<br>
+    5. Verify RO registers (STATUS, RX_DATA, INT_STAT) ignore writes.
+  </td></tr>
+  <tr><td><strong>Expected Results</strong></td><td>All registers default to specified reset values; reads return exactly the last written value (masked by RO bits).</td></tr>
+  <tr><td><strong>Pass/Fail</strong></td><td><span class="tag green">Pass</span> if all backdoor and frontdoor checks match. <span class="tag">Fail</span> if any bit is stuck or alters unintentionally.</td></tr>
+</table>
+</div>
+
+<!-- TC-03 -->
+<div class="section">
+<h3>TC-03: <code>mode_coverage_test</code></h3>
+<table>
+  <tr><td style="width:160px"><strong>Purpose</strong></td><td>Verify all major SPI operational modes.</td></tr>
+  <tr><td><strong>Requirements</strong></td><td><span class="req">R4</span> <span class="req">R5</span> <span class="req">R6</span> <span class="req">R7</span></td></tr>
+  <tr><td><strong>Scope</strong></td><td>Cross-coverage of all 4 SPI modes (CPOL/CPHA) × {MSB-first, LSB-first} × {8, 16, 32 bits} = 24 combinations.</td></tr>
+  <tr><td><strong>Stimulus</strong></td><td>
+    For each of the 24 combinations:<br>
+    1. Configure CTRL with the target mode, ordering, and width.<br>
+    2. Synchronise the SPI Slave BFM to the same mode.<br>
+    3. Push a known TX_DATA pattern, assert SS, wait for completion.<br>
+    4. Read RX_DATA and compare against prediction.
+  </td></tr>
+  <tr><td><strong>Expected Results</strong></td><td>SCLK idle polarity and sample/launch edges adjust dynamically; bit ordering is strictly followed.</td></tr>
+  <tr><td><strong>Pass/Fail</strong></td><td><span class="tag green">Pass</span> if slave BFM accurately decodes all 24 payloads. <span class="tag">Fail</span> if MOSI transitions on the wrong edge.</td></tr>
+</table>
+</div>
+
+<!-- TC-04 -->
+<div class="section">
+<h3>TC-04: <code>width_coverage_test</code></h3>
+<table>
+  <tr><td style="width:160px"><strong>Purpose</strong></td><td>Verify edge cases at transfer width boundaries.</td></tr>
+  <tr><td><strong>Requirements</strong></td><td><span class="req">R6</span> <span class="req">R7</span></td></tr>
+  <tr><td><strong>Scope</strong></td><td>Back-to-back testing of 8-bit, 16-bit, and 32-bit transfers.</td></tr>
+  <tr><td><strong>Stimulus</strong></td><td>
+    1. Configure for 8-bit transfer, send data, verify SCLK count = 8.<br>
+    2. Reconfigure for 16-bit, send data, verify SCLK count = 16.<br>
+    3. Reconfigure for 32-bit, send data, verify SCLK count = 32.<br>
+    4. Test width transitions back-to-back without disabling the controller.
+  </td></tr>
+  <tr><td><strong>Expected Results</strong></td><td>Transfers take exactly WIDTH SCLK cycles; BUSY deasserts exactly one PCLK after the last sample edge.</td></tr>
+  <tr><td><strong>Pass/Fail</strong></td><td><span class="tag green">Pass</span> if no bits truncated or extended. <span class="tag">Fail</span> if APB interface misaligns the data payload.</td></tr>
+</table>
+</div>
+
+<!-- TC-05 -->
+<div class="section">
+<h3>TC-05: <code>fifo_stress_test</code></h3>
+<table>
+  <tr><td style="width:160px"><strong>Purpose</strong></td><td>Verify TX and RX FIFO pointers under heavy load without triggering overflows.</td></tr>
+  <tr><td><strong>Requirements</strong></td><td><span class="req">R9</span> <span class="req">R10</span> <span class="req">R11</span> <span class="req">R12</span></td></tr>
+  <tr><td><strong>Scope</strong></td><td>Push/pop operations near full/empty conditions and continuous back-to-back transfers keeping the pipeline saturated.</td></tr>
+  <tr><td><strong>Stimulus</strong></td><td>
+    1. Fill TX FIFO with 8 entries; verify TX_FULL asserts.<br>
+    2. Start transfers; read RX_DATA as each completes.<br>
+    3. Verify RX_FULL asserts when 8 entries are received without reads.<br>
+    4. Run continuous back-to-back transfers to stress pointer wrap-around.
+  </td></tr>
+  <tr><td><strong>Expected Results</strong></td><td>TX_FULL asserts at exactly 8 entries; data shifts continuously without dropping elements.</td></tr>
+  <tr><td><strong>Pass/Fail</strong></td><td><span class="tag green">Pass</span> if FIFO ordering is strictly FIFO. <span class="tag">Fail</span> if data sequence corrupted or pointers mismatch.</td></tr>
+</table>
+</div>
+
+<!-- TC-06 -->
+<div class="section">
+<h3>TC-06: <code>interrupt_test</code></h3>
+<table>
+  <tr><td style="width:160px"><strong>Purpose</strong></td><td>Verify the complete interrupt lifecycle and W1C mechanisms.</td></tr>
+  <tr><td><strong>Requirements</strong></td><td><span class="req">R16</span> <span class="req">R17</span> <span class="req">R18</span></td></tr>
+  <tr><td><strong>Scope</strong></td><td>Each of the 5 interrupts: TRANSFER_DONE, RX_OVF, TX_OVF, RX_FULL, TX_EMPTY — trigger, mask, W1C, W1C race.</td></tr>
+  <tr><td><strong>Stimulus</strong></td><td>
+    1. Enable all interrupt masks; trigger TRANSFER_DONE by completing a transfer → verify IRQ=1.<br>
+    2. W1C clear the flag → verify IRQ=0.<br>
+    3. Mask one source; trigger it → verify INT_STAT set but IRQ=0.<br>
+    4. Trigger a hardware event on the same PCLK cycle as a W1C write → verify bit stays set.<br>
+    5. Repeat for each of the 5 sources.
+  </td></tr>
+  <tr><td><strong>Expected Results</strong></td><td>Masked events set INT_STAT but hold IRQ=0; W1C race preserves the bit at 1.</td></tr>
+  <tr><td><strong>Pass/Fail</strong></td><td><span class="tag green">Pass</span> if IRQ = |(INT_STAT &amp; INT_EN). <span class="tag">Fail</span> if events are dropped during W1C race.</td></tr>
+</table>
+</div>
+
+<!-- TC-07 -->
+<div class="section">
+<h3>TC-07: <code>clk_div_corner_test</code></h3>
+<table>
+  <tr><td style="width:160px"><strong>Purpose</strong></td><td>Verify the SCLK generation logic at corner-case divider values.</td></tr>
+  <tr><td><strong>Requirements</strong></td><td><span class="req">R8</span> <span class="req">R24</span> <span class="req">R25</span></td></tr>
+  <tr><td><strong>Scope</strong></td><td>DIV = 0, 1, small random values, and large values (≥1024) up to 65535.</td></tr>
+  <tr><td><strong>Stimulus</strong></td><td>
+    1. For each DIV value: configure CLK_DIV, start a transfer, measure the SCLK period.<br>
+    2. Compare measured period against PCLK/(2×(DIV+1)).<br>
+    3. Verify 50% duty cycle on SCLK.
+  </td></tr>
+  <tr><td><strong>Expected Results</strong></td><td>SCLK frequency = PCLK/(2×(DIV+1)); DIV=0 yields PCLK/2 without errors.</td></tr>
+  <tr><td><strong>Pass/Fail</strong></td><td><span class="tag green">Pass</span> if measured period matches formula exactly. <span class="tag">Fail</span> if duty cycle deviates from 50%.</td></tr>
+</table>
+</div>
+
+<!-- TC-08 -->
+<div class="section">
+<h3>TC-08: <code>loopback_test</code></h3>
+<table>
+  <tr><td style="width:160px"><strong>Purpose</strong></td><td>Verify the internal self-test routing functionality.</td></tr>
+  <tr><td><strong>Requirements</strong></td><td><span class="req">R19</span></td></tr>
+  <tr><td><strong>Scope</strong></td><td>CTRL.LOOPBACK = 1; external MISO driven with nonsense data by the slave BFM.</td></tr>
+  <tr><td><strong>Stimulus</strong></td><td>
+    1. Set CTRL.LOOPBACK=1, configure mode 0, 8-bit.<br>
+    2. Drive MISO with 0xFF (nonsense) from the slave BFM.<br>
+    3. Push TX_DATA = 0x5A, start transfer.<br>
+    4. Read RX_DATA → should be 0x5A (looped from TX), NOT 0xFF.
+  </td></tr>
+  <tr><td><strong>Expected Results</strong></td><td>MOSI is routed internally to RX; nonsense MISO data is ignored completely.</td></tr>
+  <tr><td><strong>Pass/Fail</strong></td><td><span class="tag green">Pass</span> if RX_DATA == TX_DATA. <span class="tag">Fail</span> if external MISO pollutes the RX FIFO.</td></tr>
+</table>
+</div>
+
+<!-- TC-09 -->
+<div class="section">
+<h3>TC-09: <code>delay_transfer_test</code></h3>
+<table>
+  <tr><td style="width:160px"><strong>Purpose</strong></td><td>Verify the inter-transfer delay logic.</td></tr>
+  <tr><td><strong>Requirements</strong></td><td><span class="req">R21</span></td></tr>
+  <tr><td><strong>Scope</strong></td><td>Set DELAY &gt; 0 and queue multiple transfers in the TX FIFO.</td></tr>
+  <tr><td><strong>Stimulus</strong></td><td>
+    1. Configure DELAY = 5, push 3 entries to TX FIFO.<br>
+    2. Assert SS and start transfers.<br>
+    3. Monitor SCLK: count idle half-cycles between consecutive transfers.<br>
+    4. Verify BUSY stays asserted during the delay gap.
+  </td></tr>
+  <tr><td><strong>Expected Results</strong></td><td>The master inserts exactly DELAY SCLK half-cycles of idle time between consecutive transfers while holding BUSY=1.</td></tr>
+  <tr><td><strong>Pass/Fail</strong></td><td><span class="tag green">Pass</span> if gap matches the programmed delay precisely. <span class="tag">Fail</span> if delay is skipped or applied incorrectly.</td></tr>
+</table>
+</div>
+
+<!-- TC-10 -->
+<div class="section">
+<h3>TC-10: <code>error_injection_test</code></h3>
+<table>
+  <tr><td style="width:160px"><strong>Purpose</strong></td><td>Verify the controller's robustness against illegal software sequences.</td></tr>
+  <tr><td><strong>Requirements</strong></td><td><span class="req">R13</span> <span class="req">R14</span> <span class="req">R15</span> <span class="req">R23</span></td></tr>
+  <tr><td><strong>Scope</strong></td><td>Write to TX_DATA when full, read RX_DATA when empty, illegal width encoding (2'b11), reserved register offsets (0x24+).</td></tr>
+  <tr><td><strong>Stimulus</strong></td><td>
+    1. Fill TX FIFO (8 writes), then write once more → verify TX_OVF flag.<br>
+    2. Read RX_DATA without any transfers pending → verify returns 0, no RX_OVF.<br>
+    3. Write CTRL.WIDTH = 2'b11 (illegal) → observe behavior (undefined, no crash).<br>
+    4. Write/read reserved offsets 0x24, 0x28, 0x2C → writes ignored, reads return 0.
+  </td></tr>
+  <tr><td><strong>Expected Results</strong></td><td>Overflow flags trigger on full bounds; empty RX reads return 0 without triggering overflow; reserved offsets are inert.</td></tr>
+  <tr><td><strong>Pass/Fail</strong></td><td><span class="tag green">Pass</span> if IP safely discards illegal accesses and sets appropriate flags. <span class="tag">Fail</span> if state machine deadlocks or asserts PSLVERR.</td></tr>
+</table>
+</div>
+
+<h2>5. Regression Strategy</h2>
+<table>
+  <tr><th>Parameter</th><th>Value</th></tr>
+  <tr><td>Total required tests</td><td>10</td></tr>
+  <tr><td>Seeds per test</td><td>20 (configurable via REGRESSION_SEEDS)</td></tr>
+  <tr><td>Total simulation runs</td><td>200 (well under the 10,000 cap)</td></tr>
+  <tr><td>Timeout per test</td><td>10 minutes wall-clock</td></tr>
+  <tr><td>Determinism</td><td>All tests are reproducible given +SEED=&lt;n&gt;</td></tr>
+</table>
+
+<h2>6. Pass/Fail Criteria &amp; Log Contract</h2>
+<p>Every test must end with exactly one of the following lines:</p>
+<ul>
+  <li><code>[TEST_PASSED] &lt;test_name&gt;</code> — zero errors, all checks passed</li>
+  <li><code>[TEST_FAILED] &lt;test_name&gt; errors=&lt;n&gt;</code> — at least one error detected</li>
+</ul>
+<p>Bug detection is signalled via:</p>
+<ul>
+  <li><code>[SCOREBOARD_ERROR] &lt;description&gt;</code> — data mismatch</li>
+  <li><code>[ASSERTION_ERROR] &lt;name&gt; &lt;description&gt;</code> — SVA failure</li>
+  <li><code>[CHECKER_ERROR] &lt;name&gt; &lt;description&gt;</code> — explicit $error check</li>
+</ul>
+
+<div class="footer">
+  SPI Master Controller — Test Plan v1.0 — Spring 2026
+</div>
+
+</body>
+</html>
