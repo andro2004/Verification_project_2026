@@ -2,6 +2,8 @@
 // Purpose: Edge cases at 8/16/32-bit boundaries (R6, R7)
 `ifndef WIDTH_COVERAGE_TEST_SV
 `define WIDTH_COVERAGE_TEST_SV
+`include "../env/ref_model.sv"
+`include "../env/coverage.sv"
 class width_coverage_test;
     static task run(ref spi_ref_model ref_model, ref spi_coverage_col coverage);
         $display("[INFO] width_coverage_test: TODO — not yet implemented");

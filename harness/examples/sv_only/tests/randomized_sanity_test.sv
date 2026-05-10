@@ -35,7 +35,8 @@
 
 `ifndef RANDOMIZED_SANITY_TEST_SV
 `define RANDOMIZED_SANITY_TEST_SV
-
+`include "../env/ref_model.sv"
+`include "../env/coverage.sv"
 class randomized_sanity_test;
 
     static task run(ref spi_ref_model     ref_model,

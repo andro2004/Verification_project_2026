@@ -22,7 +22,8 @@
 
 `ifndef SANITY_TEST_SV
 `define SANITY_TEST_SV
-
+`include "../env/ref_model.sv"
+`include "../env/coverage.sv"
 // Localparam aliases so the test body reads naturally without dragging in
 // a `apb_master_bfm::` scope-resolution that requires the BFM to be a class.
 // These mirror apb_master_bfm.sv exactly; if you change one, change the other.

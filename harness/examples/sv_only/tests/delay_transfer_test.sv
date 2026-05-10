@@ -2,6 +2,8 @@
 // Purpose: DELAY > 0 inserts idle SCLK between consecutive transfers (R21)
 `ifndef DELAY_TRANSFER_TEST_SV
 `define DELAY_TRANSFER_TEST_SV
+`include "../env/ref_model.sv"
+`include "../env/coverage.sv"
 class delay_transfer_test;
     static task run(ref spi_ref_model ref_model, ref spi_coverage_col coverage);
         $display("[INFO] delay_transfer_test: TODO — not yet implemented");

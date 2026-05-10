@@ -2,6 +2,8 @@
 // Purpose: Reset values + write-read for every R/W register (R1, R2)
 `ifndef REG_ACCESS_TEST_SV
 `define REG_ACCESS_TEST_SV
+`include "../env/ref_model.sv"
+`include "../env/coverage.sv"
 class reg_access_test;
     static task run(ref spi_ref_model ref_model, ref spi_coverage_col coverage);
         $display("[INFO] reg_access_test: TODO — not yet implemented");
