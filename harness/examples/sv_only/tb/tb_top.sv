@@ -13,12 +13,21 @@
 // =============================================================================
 
 `timescale 1ns/1ps
-`include "env/ref_model.sv"
-`include "env/coverage.sv"
-`include "sequences/stim_lib.sv"
-`include "tests/sanity_test.sv"
-`include "tests/randomized_sanity_test.sv"
-`include "tests/ral_hw_reset_test.sv"
+`include "../env/ref_model.sv"
+`include "../env/coverage.sv"
+`include "../sequences/stim_lib.sv"
+`include "../tests/sanity_test.sv"
+`include "../tests/randomized_sanity_test.sv"
+`include "../tests/ral_hw_reset_test.sv"
+`include "../tests/loopback_test.sv"
+`include "../tests/error_injection_test.sv"
+`include "../tests/reg_access_test.sv"
+`include "../tests/mode_coverage_test.sv"
+`include "../tests/width_coverage_test.sv"
+`include "../tests/delay_transfer_test.sv"
+`include "../tests/clk_div_corner_test.sv"
+`include "../tests/interrupt_test.sv"
+`include "../tests/fifo_stress_test.sv"
 
 module tb_top;
 

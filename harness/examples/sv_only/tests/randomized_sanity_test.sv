@@ -37,6 +37,7 @@
 `define RANDOMIZED_SANITY_TEST_SV
 `include "../env/ref_model.sv"
 `include "../env/coverage.sv"
+`include "../sequences/stim_lib.sv"
 class randomized_sanity_test;
 
     static task run(ref spi_ref_model     ref_model,
@@ -116,7 +117,8 @@ class randomized_sanity_test;
         // should also extend the covergroup with bins for clk_div / delay.
         coverage.sample_config(.mode(t.mode),
                                .lsb_first(t.lsb_first),
-                               .width(t.width));
+                               .width(t.width),
+    				.loopback(1'b0));
 
             // Step 7 - push TX and assert SS lane 0.
             // SS_CTRL layout (see Register Map): [3:0]=ss_en, [7:4]=ss_val.

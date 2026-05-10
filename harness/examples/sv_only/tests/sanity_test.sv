@@ -58,7 +58,8 @@ class sanity_test;
         tb_top.u_apb_bfm.apb_write(APB_CLK_DIV, 32'h0000_0004);  // divide /4
         tb_top.u_apb_bfm.apb_write(APB_INT_EN,  32'h0000_000F);
 
-        coverage.sample_config(.mode(2'b00), .lsb_first(1'b0), .width(2'b00));
+        coverage.sample_config(.mode(2'b00), .lsb_first(1'b0), .width(2'b00),
+    .loopback(1'b0));
 
         // Push one byte, assert SS, wait for transfer done
         ref_model.predict_single_byte(.tx_byte(8'h5A),
