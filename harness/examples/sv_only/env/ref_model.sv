@@ -35,16 +35,16 @@ class spi_ref_model;
     bit rx_ovf;
     bit tx_ovf;
 
-    // Minimal predictor state for compatibility with sanity_test
-    bit [7:0]  pred_rx_byte;
-    bit [7:0]  pred_tx_byte;
+    // Predictor state for SPI pipeline
+    bit [31:0] pred_rx_fifo[$];
+    bit [31:0] pred_tx_fifo[$];
 
     function new();
         reset();
     endfunction
 
     // R2: All registers return their specified reset values after PRESETn asserts.
-    function void reset();  //new()
+    function void reset();
         error_count  = 0;
         ctrl         = 32'h0000_0000;
         clk_div      = 32'h0000_0000;
@@ -60,8 +60,8 @@ class spi_ref_model;
         rx_ovf = 0;
         tx_ovf = 0;
 
-        pred_rx_byte = 8'h0;
-        pred_tx_byte = 8'h0;
+        pred_rx_fifo.delete();
+        pred_tx_fifo.delete();
     endfunction
 
     // Helper to compute dynamic STATUS
@@ -173,22 +173,59 @@ class spi_ref_model;
         end
     endfunction
 
-    // Predict the result of a loopback OR of an externally-fed MISO byte.
-    // For the scaffold we simply echo the byte we expect the slave BFM to
-    // return. Real submissions should model the full SPI pipeline.
+    // Model the full SPI pipeline prediction for any width
+    task predict_transfer(input bit [31:0] tx_data,
+                          input bit [31:0] miso_pattern,
+                          input bit       loopback,
+                          input bit [1:0] width,
+                          input bit       lsb_first);
+        bit [31:0] exp_tx;
+        bit [31:0] exp_rx;
+
+        // Mask tx_data based on width
+        if (width == 2'b00) exp_tx = tx_data & 32'h0000_00FF;
+        else if (width == 2'b01) exp_tx = tx_data & 32'h0000_FFFF;
+        else exp_tx = tx_data;
+        
+        pred_tx_fifo.push_back(exp_tx);
+
+        if (loopback) begin
+            exp_rx = exp_tx;
+        end else begin
+            // Replicate the 8-bit BFM miso_pattern up to the correct width
+            if (width == 2'b00) begin
+                exp_rx = miso_pattern & 32'h0000_00FF;
+            end else if (width == 2'b01) begin
+                exp_rx = {miso_pattern[7:0], miso_pattern[7:0]} & 32'h0000_FFFF;
+            end else begin
+                exp_rx = {miso_pattern[7:0], miso_pattern[7:0], miso_pattern[7:0], miso_pattern[7:0]};
+            end
+        end
+        
+        pred_rx_fifo.push_back(exp_rx);
+    endtask
+
+    // Backward compatibility for basic scaffold tests
     task predict_single_byte(input bit [7:0] tx_byte,
                              input bit [7:0] miso_pattern,
                              input bit       loopback);
-        pred_tx_byte = tx_byte;
-        pred_rx_byte = loopback ? tx_byte : miso_pattern;
+        predict_transfer({24'h0, tx_byte}, {24'h0, miso_pattern}, loopback, 2'b00, 1'b0);
     endtask
 
     task check_rx(input bit [31:0] observed);
-        bit [7:0] obs = observed[7:0];
-        if (obs !== pred_rx_byte) begin
-            $display("[SCOREBOARD_ERROR] RX byte mismatch: predicted=0x%02h observed=0x%02h",
-                     pred_rx_byte, obs);
+        if (pred_rx_fifo.size() == 0) begin
+            $display("[SCOREBOARD_ERROR] RX check failed: No expected data predicted for observed=0x%08h", observed);
             error_count++;
+            return;
+        end
+        
+        begin
+            bit [31:0] expected = pred_rx_fifo.pop_front();
+            if (observed !== expected) begin
+                $display("[SCOREBOARD_ERROR] RX data mismatch: predicted=0x%08h observed=0x%08h",
+                         expected, observed);
+                error_count++;
+            end
         end
     endtask
 
