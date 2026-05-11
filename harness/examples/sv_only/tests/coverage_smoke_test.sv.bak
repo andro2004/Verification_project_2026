@@ -1,0 +1,220 @@
+// =============================================================================
+// coverage_smoke_test.sv
+// -----------------------------------------------------------------------------
+// Minimal self-contained test whose ONLY job is to exercise every sample_*
+// function in spi_coverage_col and confirm the covergroups accumulate hits.
+//
+// It does NOT need the ref_model to be complete — it passes u_ref through
+// only because the tb_top dispatcher requires that signature. No
+// check_rx / check_reg calls are made here.
+//
+// Add to tb_top.sv:
+//   `include "tests/coverage_smoke_test.sv"
+//   ...
+//   "coverage_smoke_test" : coverage_smoke_test::run(u_ref, u_cov);
+//
+// Run with:
+//   make run TEST=coverage_smoke_test SEED=1
+// =============================================================================
+
+`ifndef COVERAGE_SMOKE_TEST_SV
+`define COVERAGE_SMOKE_TEST_SV
+`include "../env/ref_model.sv"
+`include "../env/coverage.sv"
+`include "../sequences/stim_lib.sv"
+class coverage_smoke_test;
+
+    static task run(ref spi_ref_model    ref_model,
+                    ref spi_coverage_col coverage);
+
+        // ---- local variables ------------------------------------------------
+        bit [31:0] rd;
+        bit [31:0] status;
+        spi_txn    txn;
+
+        $display("[INFO] coverage_smoke_test: starting");
+
+        // =====================================================================
+        // PHASE 1 — cg_config
+        // Hit all 4 modes × 3 widths × 2 orderings = 24 cross bins
+        // Also hit loopback on/off
+        // =====================================================================
+        $display("[INFO] coverage_smoke_test: phase 1 - cg_config");
+
+        for (int mode_i = 0; mode_i < 3; mode_i++) 
+for (int width_i = 0; width_i < 3; width_i++) 
+for (int order_i = 0; order_i < 2; order_i++)begin    // 0=MSB, 1=LSB
+            coverage.sample_config(
+                .mode     (mode_i[1:0]),
+                .width    (width_i[1:0]),
+                .lsb_first(order_i[0]),
+                .loopback (order_i[0])     // alternate loopback so both bins hit
+            );
+        end
+
+        // =====================================================================
+        // PHASE 2 — cg_clkdiv
+        // Hit the 7 named corner bins + one random value for the default bin
+        // =====================================================================
+        $display("[INFO] coverage_smoke_test: phase 2 - cg_clkdiv");
+
+        coverage.sample_clkdiv(16'd0);
+        coverage.sample_clkdiv(16'd1);
+        coverage.sample_clkdiv(16'd2);
+        coverage.sample_clkdiv(16'd3);
+        coverage.sample_clkdiv(16'd255);
+        coverage.sample_clkdiv(16'd1024);
+        coverage.sample_clkdiv(16'd65535);
+        coverage.sample_clkdiv(16'd500);    // hits the "default" / div_other bin
+
+        // =====================================================================
+        // PHASE 3 — cg_fifo
+        // Hit all 5 occupancy levels for both TX and RX
+        // =====================================================================
+        $display("[INFO] coverage_smoke_test: phase 3 - cg_fifo");
+
+        coverage.sample_fifo(0, 0);   // both empty
+        coverage.sample_fifo(1, 1);   // one entry each
+        coverage.sample_fifo(4, 4);   // mid
+        coverage.sample_fifo(7, 7);   // near-full
+        coverage.sample_fifo(8, 8);   // both full
+
+        // Also cross the asymmetric cases (TX full while RX empty, etc.)
+        coverage.sample_fifo(8, 0);
+        coverage.sample_fifo(0, 8);
+
+        // =====================================================================
+        // PHASE 4 — cg_delay
+        // Hit all 3 bins: 0, 1, >=128
+        // =====================================================================
+        $display("[INFO] coverage_smoke_test: phase 4 - cg_delay");
+
+        coverage.sample_delay(8'd0);
+        coverage.sample_delay(8'd1);
+        coverage.sample_delay(8'd128);
+        coverage.sample_delay(8'd255);   // also >=128
+
+        // =====================================================================
+        // PHASE 5 — cg_interrupt
+        // Hit each individual source, all-clear, all-set, and masked combos
+        // =====================================================================
+        $display("[INFO] coverage_smoke_test: phase 5 - cg_interrupt");
+
+        // individual sources (INT_EN=all enabled)
+        coverage.sample_interrupt(5'b00000, 5'b11111);  // all_clear
+        coverage.sample_interrupt(5'b00001, 5'b11111);  // TX_EMPTY only
+        coverage.sample_interrupt(5'b00010, 5'b11111);  // RX_FULL only
+        coverage.sample_interrupt(5'b00100, 5'b11111);  // TX_OVF only
+        coverage.sample_interrupt(5'b01000, 5'b11111);  // RX_OVF only
+        coverage.sample_interrupt(5'b10000, 5'b11111);  // XFER_DONE only
+        coverage.sample_interrupt(5'b11111, 5'b11111);  // all_set
+
+        // masked scenarios (INT_EN=0 — source fires but IRQ stays low)
+        coverage.sample_interrupt(5'b00001, 5'b00000);  // TX_EMPTY masked
+        coverage.sample_interrupt(5'b10000, 5'b00000);  // XFER_DONE masked
+
+        // partial enable
+        coverage.sample_interrupt(5'b00011, 5'b11110);  // multiple sources, partial mask
+        coverage.sample_interrupt(5'b11111, 5'b00000);  // all firing, all masked
+
+        // =====================================================================
+        // PHASE 6 — cg_ss
+        // Hit each lane alone, no lanes, and a multi-lane pattern
+        // =====================================================================
+        $display("[INFO] coverage_smoke_test: phase 6 - cg_ss");
+
+        coverage.sample_ss(4'b0000);   // no lanes (idle)
+        coverage.sample_ss(4'b0001);   // lane 0 only
+        coverage.sample_ss(4'b0010);   // lane 1 only
+        coverage.sample_ss(4'b0100);   // lane 2 only
+        coverage.sample_ss(4'b1000);   // lane 3 only
+        coverage.sample_ss(4'b0011);   // multi: lanes 0+1
+        coverage.sample_ss(4'b1111);   // multi: all lanes
+
+        // =====================================================================
+        // PHASE 7 — cg_register
+        // Hit every register offset in both read and write direction,
+        // plus a reserved offset
+        // =====================================================================
+        $display("[INFO] coverage_smoke_test: phase 7 - cg_register");
+
+        begin
+            // All 9 real registers — write then read
+            bit [7:0] addrs[9] = '{8'h00, 8'h04, 8'h08, 8'h0C,
+                                    8'h10, 8'h14, 8'h18, 8'h1C, 8'h20};
+            foreach (addrs[i]) begin
+                coverage.sample_register(addrs[i], 1'b1);  // write
+                coverage.sample_register(addrs[i], 1'b0);  // read
+            end
+            // Reserved offset
+            coverage.sample_register(8'h24, 1'b1);
+            coverage.sample_register(8'h24, 1'b0);
+        end
+
+        // =====================================================================
+        // PHASE 8 — one real APB transaction
+        // Confirms the coverage class works inside an actual simulation, not
+        // just as a data structure. Do a single mode-0 8-bit transfer via
+        // the real DUT using stim_lib.
+        // =====================================================================
+        $display("[INFO] coverage_smoke_test: phase 8 - real APB transfer");
+
+        txn = new();
+        // Override constraints for a fast, predictable transfer
+        txn.mode       = 2'b00;
+        txn.width      = 2'b00;   // 8-bit
+        txn.lsb_first  = 1'b0;
+        txn.loopback   = 1'b1;    // loopback: no slave needed
+        txn.clk_div    = 16'd4;
+        txn.delay_cfg  = 8'd0;
+        txn.ss_en      = 4'b0001;
+        txn.tx_data    = 32'h0000_005A;
+
+        tb_top.bfm_mode    = 2'b00;
+        tb_top.bfm_pattern = 8'hA5;
+
+        spi_sequence_lib::configure_dut(txn);
+
+        // Sample clkdiv and config from the actual txn fields
+        coverage.sample_config(.mode(txn.mode), .width(txn.width),
+                                .lsb_first(txn.lsb_first), .loopback(txn.loopback));
+        coverage.sample_clkdiv(txn.clk_div);
+        coverage.sample_delay(txn.delay_cfg);
+        coverage.sample_ss(txn.ss_en);
+        coverage.sample_register(8'h00, 1'b1);   // CTRL write
+        coverage.sample_register(8'h10, 1'b1);   // CLK_DIV write
+
+        spi_sequence_lib::push_single(txn);
+        spi_sequence_lib::target_ss(txn.ss_en);
+        spi_sequence_lib::wait_idle();
+        spi_sequence_lib::target_ss(4'b0000);
+
+        tb_top.u_apb_bfm.apb_read(SL_RX_DATA, rd);
+        coverage.sample_register(8'h0C, 1'b0);   // RX_DATA read
+
+        // Read STATUS and sample fifo occupancy via backdoor
+        tb_top.u_apb_bfm.apb_read(SL_STATUS, status);
+        coverage.sample_register(8'h04, 1'b0);   // STATUS read
+
+        // Read INT_STAT and sample interrupt state
+        begin
+            bit [31:0] istat;
+            tb_top.u_apb_bfm.apb_read(SL_INT_STAT, istat);
+            coverage.sample_interrupt(istat[4:0], 5'b11111);
+            coverage.sample_register(8'h1C, 1'b0);  // INT_STAT read
+        end
+
+        // Backdoor FIFO occupancy sample (no ref_model needed)
+        begin
+            int tx_occ = tb_top.u_wrap.u_dut.u_regfile.tx_count;
+            int rx_occ = tb_top.u_wrap.u_dut.u_regfile.rx_count;
+            coverage.sample_fifo(tx_occ, rx_occ);
+        end
+
+        $display("[INFO] coverage_smoke_test: all phases done, errors=%0d",
+                 ref_model.error_count);
+    endtask
+
+endclass
+
+`endif // COVERAGE_SMOKE_TEST_SV

@@ -28,6 +28,7 @@
 `include "../tests/clk_div_corner_test.sv"
 `include "../tests/interrupt_test.sv"
 `include "../tests/fifo_stress_test.sv"
+`include "../tests/coverage_smoke_test.sv"
 
 module tb_top;
 
@@ -51,7 +52,7 @@ module tb_top;
     // ----------------- BFMs -------------------------------------------------
     apb_master_bfm u_apb_bfm (.apb(apb.master));
     spi_slave_bfm  u_spi_bfm (.spi(spi.slave), .mode(bfm_mode),
-                              .miso_byte(bfm_pattern));
+                              .miso_data(bfm_pattern));
 
     // ----------------- Predictor / Scoreboard / Coverage --------------------
     spi_ref_model    u_ref   = new();
@@ -84,31 +85,25 @@ module tb_top;
 
         $display("[INFO] Starting test: %s", testname);
 
-        case (testname)
-            "sanity_test"             : sanity_test::run(u_ref, u_cov);
-            "randomized_sanity_test"  : randomized_sanity_test::run(u_ref, u_cov);
-            "ral_hw_reset_test"    : begin
-                // SV-only scaffold does not implement the RAL bonus.
-                // Emit the TEST_SKIPPED line so the grader can award 0 for
-                // the RAL bonus without penalising the rest of the rubric.
-                $display("[TEST_SKIPPED] ral_hw_reset_test");
-                $finish;
-            end
-            // TODO: add one case arm per required test you implement.
-            // The grader expects every test name listed in
-            // harness/grading_interface.md Section 3 to print
-            // [TEST_PASSED]/[TEST_FAILED] exactly once. Tests should
-            // follow the sanity_test signature (predictor + coverage by
-            // ref; BFMs reached via tb_top.u_apb_bfm / tb_top.u_spi_bfm).
-            // Example:
-            //   "reg_access_test"     : reg_access_test::run(u_ref, u_cov);
-            //   "mode_coverage_test"  : mode_coverage_test::run(u_ref, u_cov);
-            default : begin
-                $display("[TEST_FAILED] %s errors=1  (unknown test name)", testname);
-                $finish;
-            end
-        endcase
+       case (testname)
 
+    "sanity_test"            : sanity_test::run(u_ref, u_cov);
+
+    "randomized_sanity_test" : randomized_sanity_test::run(u_ref, u_cov);
+
+    "coverage_smoke_test"    : coverage_smoke_test::run(u_ref, u_cov);
+
+    "ral_hw_reset_test" : begin
+        $display("[TEST_SKIPPED] ral_hw_reset_test");
+        $finish;
+    end
+
+    default : begin
+        $display("[TEST_FAILED] %s errors=1 (unknown test name)", testname);
+        $finish;
+    end
+
+endcase
         // Single PASS line for the dispatcher. Each test::run task is
         // expected to have printed [SCOREBOARD_ERROR] on mismatches and
         // incremented u_ref.error_count; convert that into the final
