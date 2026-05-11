@@ -192,11 +192,11 @@ class spi_ref_model;
             if (rx_fifo.size() < 8) begin
                 rx_fifo.push_back(rx_val);
                 if (rx_fifo.size() == 8) begin
-                    int_stat[1] = 1; // RX_FULL event
+                    int_stat[1] = 1; // RX_FULL event   SPI transfer
                 end
             end else begin
                 rx_ovf = 1;
-                int_stat[3] = 1; // RX_OVF event
+                int_stat[3] = 1; // RX_OVF event   SPI spec r14
             end
             int_stat[4] = 1; // TRANSFER_DONE event
         end
