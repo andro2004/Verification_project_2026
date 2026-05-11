@@ -83,10 +83,24 @@ class spi_ref_model;
             32'h00: begin // CTRL
                 // Except R3: Do NOT hold shifter and FIFOs in reset if EN=0
                 ctrl = data & 32'h0000_00FF; // Bits 31:8 are RSVD
+                if (ctrl[0] == 1'b0) begin
+                    // Only reset shifter and FIFOs as per R3 (Not the APB registers)
+                    tx_fifo.delete();
+                    rx_fifo.delete();
+                    pred_tx_fifo.delete();
+                    pred_rx_fifo.delete();
+                    tx_ovf = 0;
+                    rx_ovf = 0;
+                    busy = 0;
+                end
             end
             32'h08: begin // TX_DATA
                 if (ctrl[0] == 1'b0) begin
                     // Write ignored silently if EN=0
+                    /*
+                        mstr is used for enabling the fsm,
+                        but if master is deasserted it still allows writing to the tx_fifo
+                    */
                 end else if (tx_fifo.size() < 8) begin
                     // Extract data based on width
                     bit [1:0] width_cfg = ctrl[7:6];
@@ -110,9 +124,6 @@ class spi_ref_model;
                                     2'b01: tx_push_data = {16'b0, PWDATA[15:0]};
                                     default: tx_push_data = PWDATA; ????????????????????????
                     */
-            endcase
-        end
-                    
                     tx_fifo.push_back(masked_data);
                 end else begin // TX_FULL=1
                     tx_ovf = 1;
@@ -124,8 +135,8 @@ class spi_ref_model;
             32'h18: int_en  = data & 32'h0000_001F; // Bits 31:5 are RSVD
             32'h1C: begin // INT_STAT (W1C)
                 int_stat = int_stat & ~data;
-                if (data[3]) rx_ovf = 0;
-                if (data[2]) tx_ovf = 0;
+                if (data[3]) rx_ovf = 0;    // (sticky, cleared via INT_STAT)  from specs
+                if (data[2]) tx_ovf = 0;    // (sticky, cleared via INT_STAT)
             end
             32'h20: delay_reg = data & 32'h0000_00FF; // Bits 31:8 are RSVD
             default: ; // Reserved offsets are ignored
