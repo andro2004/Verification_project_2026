@@ -3,6 +3,7 @@
 // -----------------------------------------------------------------------------
 // Minimal self-contained test whose ONLY job is to exercise every sample_*
 // function in spi_coverage_col and confirm the covergroups accumulate hits.
+// it doesn't exercise the dut, excpet for the last phase in this test!
 //
 // It does NOT need the ref_model to be complete ? it passes u_ref through
 // only because the tb_top dispatcher requires that signature. No
