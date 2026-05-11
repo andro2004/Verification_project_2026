@@ -91,9 +91,27 @@ class spi_ref_model;
                     // Extract data based on width
                     bit [1:0] width_cfg = ctrl[7:6];
                     bit [31:0] masked_data = 0;
-                    if (width_cfg == 2'b00) masked_data = data & 32'h0000_00FF;
-                    else if (width_cfg == 2'b01) masked_data = data & 32'h0000_FFFF;
-                    else masked_data = data;
+                    if (width_cfg == 2'b00) masked_data = data & 32'h0000_00FF; //8-bit byte
+                    else if (width_cfg == 2'b01) masked_data = data & 32'h0000_FFFF; //16-bit half words
+                    else masked_data = data; //32-bit words
+                    /*
+                        if width cfg ==11    
+                        what should i do????(implementation dependend (periority of check))
+                        case 1
+                            masked_data = 0      
+                        case 2 
+                            masked_data = data
+                            we check the hardware implemintation code and find that it was case 2
+                            in apb_regfile.sv in line 198
+                            if (apb_write && PADDR == OFF_TX_DATA && ctrl_en) begin
+                                tx_push_valid = 1'b1;
+                                case (ctrl_width)
+                                    2'b00: tx_push_data = {24'b0, PWDATA[7:0]};
+                                    2'b01: tx_push_data = {16'b0, PWDATA[15:0]};
+                                    default: tx_push_data = PWDATA; ????????????????????????
+                    */
+            endcase
+        end
                     
                     tx_fifo.push_back(masked_data);
                 end else begin // TX_FULL=1
