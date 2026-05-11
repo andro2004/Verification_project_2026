@@ -21,6 +21,9 @@ module spi_sva (
     input wire        PENABLE,
     input wire        PREADY,
     input wire        PSLVERR,
+    input wire [7:0]  PADDR,
+    input wire        PWRITE,
+    input wire [31:0] PWDATA,
 
     // Internal regfile signals needing tap
     input wire        ctrl_en,
@@ -28,12 +31,24 @@ module spi_sva (
     input wire [4:0]  int_en,
     input wire        IRQ,
 
+    input wire        FULL,      // From FIFO/Regfile
+    input wire        OVF,       // Overflow flag
+    input wire        push,      // FIFO push signal
+    input wire [3:0]  tx_ptr,    // TX FIFO Pointer
+    input wire [3:0]  rx_ptr,    // RX FIFO Pointer
+    input wire [4:0]  hw_event,  // Hardware event source interrupts
+
     // Core signals needing tap
     input wire        sclk,
     input wire        mosi,
     input wire        cpol,
     input wire        cpha,
-    input wire [3:0]  ss_n
+    input wire [3:0]  ss_n,
+
+
+    input wire        BUSY,      // From core
+    input logic [5:0] width , // Width can be 8,16 or 32 bits
+    input wire        sample_edge // Pulse on SCLK sample edge
 );
 
     // Instantiate Regfile Assertions
@@ -47,7 +62,17 @@ module spi_sva (
         .IRQ(IRQ),
         .ctrl_en(ctrl_en),
         .INT_STAT(int_stat),
-        .INT_EN(int_en)
+        .INT_EN(int_en),
+
+        .FULL(FULL),
+        .OVF(OVF),
+        .push(push),
+        .tx_ptr(tx_ptr),
+        .rx_ptr(rx_ptr),
+        .PADDR(PADDR),
+        .PWRITE(PWRITE),
+        .PWDATA(PWDATA),
+        .hw_event(hw_event)
     );
 
     // Instantiate Core Assertions
@@ -58,7 +83,11 @@ module spi_sva (
         .mosi(mosi),
         .cpol(cpol),
         .cpha(cpha),
-        .ss_n(ss_n)
+        .ss_n(ss_n),
+
+        .width(width),
+        .BUSY(BUSY),
+        .sample_edge(sample_edge)
     );
 
 endmodule
