@@ -81,7 +81,7 @@ class spi_ref_model;
     function void apb_write(bit [31:0] addr, bit [31:0] data);
         case (addr)
             32'h00: begin // CTRL
-                // Except R3: Do NOT hold shifter and FIFOs in reset if EN=0
+                
                 ctrl = data & 32'h0000_00FF; // Bits 31:8 are RSVD
                 if (ctrl[0] == 1'b0) begin
                     // Only reset shifter and FIFOs as per R3 (Not the APB registers)
