@@ -13,14 +13,14 @@ class spi_coverage_col;
     bit [1:0] cv_mode;
     bit       cv_lsb_first;
     bit [1:0] cv_width;
- bit        cv_loopback; 
-bit [15:0] cv_div;
+    bit       cv_loopback; 
+    bit [15:0] cv_div;
     
     int cv_tx_occ;
     int cv_rx_occ;
 
     bit [7:0] cv_delay;
-  bit [4:0]  cv_int_stat;              // for cg_interrupt
+    bit [4:0]  cv_int_stat;              // for cg_interrupt
     bit [4:0]  cv_int_en;                // for cg_interrupt
     bit [3:0]  cv_ss_n;            // for cg_ss
     bit [7:0]  cv_reg_addr;              // for cg_register
@@ -254,16 +254,6 @@ bit [15:0] cv_div;
   	  cv_loopback  = loopback;
   	  cg_config.sample();
 	endfunction
-
-
-
-
-
-
-
-
-
-
 
 
 endclass
