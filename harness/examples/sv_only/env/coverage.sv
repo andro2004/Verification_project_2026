@@ -154,7 +154,7 @@ bit [15:0] cv_div;
             bins ss2_only  = {4'b0100};   // lane 2 alone
             bins ss3_only  = {4'b1000};   // lane 3 alone
             bins multi_ss  = {[4'b0011 : 4'b1111]};  // any 2+ lanes
-            bins none      = {4'b0000};   // all deasserted
+            bins none      = {4'b0000};   // all deasserted LOOPBACK test 
         }
     endgroup
    
