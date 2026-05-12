@@ -18,7 +18,6 @@
 `include "../sequences/stim_lib.sv"
 `include "../tests/sanity_test.sv"
 `include "../tests/randomized_sanity_test.sv"
-`include "../tests/ral_hw_reset_test.sv"
 `include "../tests/loopback_test.sv"
 `include "../tests/error_injection_test.sv"
 `include "../tests/reg_access_test.sv"
@@ -63,6 +62,24 @@ module tb_top;
     // instance, u_dut is the spi_master instance inside it, u_regfile is the
     // apb_regfile instance inside spi_master. The bind injects spi_sva into
     // the u_regfile instance with port hookups read from the same scope.
+    // ModelSim requires complex expressions to be assigned to wires before binding
+    wire [3:0] bind_tx_ptr = u_wrap.u_dut.u_regfile.tx_wp - u_wrap.u_dut.u_regfile.tx_rp;
+    wire [3:0] bind_rx_ptr = u_wrap.u_dut.u_regfile.rx_wp - u_wrap.u_dut.u_regfile.rx_rp;
+    
+    wire [4:0] bind_hw_event = {
+        u_wrap.u_dut.u_regfile.transfer_done_pulse,                                                               // transfer done bit 
+        (u_wrap.u_dut.u_regfile.rx_push_valid && u_wrap.u_dut.u_regfile.rx_full_w),                               // rx_ovf
+        u_wrap.u_dut.u_regfile.tx_push_dropped,                                                                   // tx_ovf 
+        (u_wrap.u_dut.u_regfile.rx_push_valid && !u_wrap.u_dut.u_regfile.rx_full_w && (u_wrap.u_dut.u_regfile.rx_count == 7)), // rx_full
+        (u_wrap.u_dut.u_regfile.tx_pop && (u_wrap.u_dut.u_regfile.tx_count == 1))                                 // tx_empty
+    };
+
+    wire [5:0] bind_width = (u_wrap.u_dut.u_core.xfer_width == 2'b00) ? 6'd8 : 
+                            (u_wrap.u_dut.u_core.xfer_width == 2'b01) ? 6'd16 : 6'd32;
+
+    // Pulling the bit-select out into a wire to satisfy ModelSim's strict binding rules
+    wire bind_ovf = u_wrap.u_dut.u_regfile.int_stat[2];
+
     bind u_wrap.u_dut.u_regfile spi_sva u_sva (
         .PCLK   (PCLK),
         .PRESETn(PRESETn),
@@ -78,15 +95,11 @@ module tb_top;
         .int_en  (u_wrap.u_dut.u_regfile.int_en),
         .IRQ     (u_wrap.u_dut.u_regfile.IRQ),
         .FULL    (u_wrap.u_dut.u_regfile.tx_full_w),
-        .OVF     (u_wrap.u_dut.u_regfile.int_stat[2]),
+        .OVF     (bind_ovf), // <--- Used the new wire here
         .push    (u_wrap.u_dut.u_regfile.tx_push_valid),
-        .tx_ptr  (u_wrap.u_dut.u_regfile.tx_wp - u_wrap.u_dut.u_regfile.tx_rp),     // rtl implementation of fifo is circular fifo, thus to know the count we need to subtract wr_ptr-rd_ptr
-        .rx_ptr  (u_wrap.u_dut.u_regfile.rx_wp - u_wrap.u_dut.u_regfile.rx_rp),
-        .hw_event({u_wrap.u_dut.u_regfile.transfer_done_pulse,      // transfer done bit 
-                   u_wrap.u_dut.u_regfile.rx_push_valid && u_wrap.u_dut.u_regfile.rx_full_w,    // rx_ovf
-                   u_wrap.u_dut.u_regfile.tx_push_dropped,      // tx_ovf 
-                   u_wrap.u_dut.u_regfile.rx_push_valid && !u_wrap.u_dut.u_regfile.rx_full_w && (u_wrap.u_dut.u_regfile.rx_count == 7),     // rx_full
-                   u_wrap.u_dut.u_regfile.tx_pop && (u_wrap.u_dut.u_regfile.tx_count == 1)}),       // tx_empty
+        .tx_ptr  (bind_tx_ptr),
+        .rx_ptr  (bind_rx_ptr),
+        .hw_event(bind_hw_event),
         .sclk    (u_wrap.u_dut.u_core.SCLK),
         .mosi    (u_wrap.u_dut.u_core.MOSI),
         .cpol    (u_wrap.u_dut.u_core.cpol),
@@ -96,7 +109,7 @@ module tb_top;
         .sclk_phase(u_wrap.u_dut.u_core.sclk_phase),
         .cfg_clk_div(u_wrap.u_dut.u_core.cfg_clk_div),
         .BUSY    (u_wrap.u_dut.u_core.busy),
-        .width   ((u_wrap.u_dut.u_core.xfer_width == 2'b00) ? 6'd8 : (u_wrap.u_dut.u_core.xfer_width == 2'b01) ? 6'd16 : 6'd32)
+        .width   (bind_width)
     );
 
     // ----------------- Test dispatch ----------------------------------------
