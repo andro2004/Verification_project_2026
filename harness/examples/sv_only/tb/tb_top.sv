@@ -66,9 +66,37 @@ module tb_top;
     bind u_wrap.u_dut.u_regfile spi_sva u_sva (
         .PCLK   (PCLK),
         .PRESETn(PRESETn),
+        .PSEL   (apb.psel),
+        .PENABLE(apb.penable),
+        .PREADY (apb.pready),
+        .PSLVERR(apb.pslverr),
+        .PADDR  (apb.paddr),
+        .PWRITE (apb.pwrite),
+        .PWDATA (apb.pwdata),
         .ctrl_en(u_wrap.u_dut.u_regfile.ctrl_en),
         .int_stat(u_wrap.u_dut.u_regfile.int_stat),
-        .IRQ     (u_wrap.u_dut.u_regfile.IRQ)
+        .int_en  (u_wrap.u_dut.u_regfile.int_en),
+        .IRQ     (u_wrap.u_dut.u_regfile.IRQ),
+        .FULL    (u_wrap.u_dut.u_regfile.tx_full_w),
+        .OVF     (u_wrap.u_dut.u_regfile.int_stat[2]),
+        .push    (u_wrap.u_dut.u_regfile.tx_push_valid),
+        .tx_ptr  (u_wrap.u_dut.u_regfile.tx_wp - u_wrap.u_dut.u_regfile.tx_rp),     // rtl implementation of fifo is circular fifo, thus to know the count we need to subtract wr_ptr-rd_ptr
+        .rx_ptr  (u_wrap.u_dut.u_regfile.rx_wp - u_wrap.u_dut.u_regfile.rx_rp),
+        .hw_event({u_wrap.u_dut.u_regfile.transfer_done_pulse,      // transfer done bit 
+                   u_wrap.u_dut.u_regfile.rx_push_valid && u_wrap.u_dut.u_regfile.rx_full_w,    // rx_ovf
+                   u_wrap.u_dut.u_regfile.tx_push_dropped,      // tx_ovf 
+                   u_wrap.u_dut.u_regfile.rx_push_valid && !u_wrap.u_dut.u_regfile.rx_full_w && (u_wrap.u_dut.u_regfile.rx_count == 7),     // rx_full
+                   u_wrap.u_dut.u_regfile.tx_pop && (u_wrap.u_dut.u_regfile.tx_count == 1)}),       // tx_empty
+        .sclk    (u_wrap.u_dut.u_core.SCLK),
+        .mosi    (u_wrap.u_dut.u_core.MOSI),
+        .cpol    (u_wrap.u_dut.u_core.cpol),
+        .cpha    (u_wrap.u_dut.u_core.cpha),
+        .ss_n    (u_wrap.u_dut.u_regfile.SS_n),
+        .sclk_cnt(u_wrap.u_dut.u_core.sclk_cnt),
+        .sclk_phase(u_wrap.u_dut.u_core.sclk_phase),
+        .cfg_clk_div(u_wrap.u_dut.u_core.cfg_clk_div),
+        .BUSY    (u_wrap.u_dut.u_core.busy),
+        .width   ((u_wrap.u_dut.u_core.xfer_width == 2'b00) ? 6'd8 : (u_wrap.u_dut.u_core.xfer_width == 2'b01) ? 6'd16 : 6'd32)
     );
 
     // ----------------- Test dispatch ----------------------------------------

@@ -33,7 +33,7 @@ module spi_sva (
 
     input wire        FULL,      // From FIFO/Regfile
     input wire        OVF,       // Overflow flag
-    input wire        push,      // FIFO push signal
+    input wire        push,      // FIFO push signal (reg tx_push_valid; from golden model)
     input wire [3:0]  tx_ptr,    // TX FIFO Pointer
     input wire [3:0]  rx_ptr,    // RX FIFO Pointer
     input wire [4:0]  hw_event,  // Hardware event source interrupts
@@ -44,11 +44,13 @@ module spi_sva (
     input wire        cpol,
     input wire        cpha,
     input wire [3:0]  ss_n,
+    input wire [16:0] sclk_cnt,
+    input wire        sclk_phase,
+    input wire [15:0] cfg_clk_div,
 
 
     input wire        BUSY,      // From core
-    input logic [5:0] width , // Width can be 8,16 or 32 bits
-    input wire        sample_edge // Pulse on SCLK sample edge
+    input logic [5:0] width      // Width can be 8,16 or 32 bits
 );
 
     // Instantiate Regfile Assertions
@@ -84,10 +86,12 @@ module spi_sva (
         .cpol(cpol),
         .cpha(cpha),
         .ss_n(ss_n),
+        .sclk_cnt(sclk_cnt),
+        .sclk_phase(sclk_phase),
+        .cfg_clk_div(cfg_clk_div),
 
         .width(width),
-        .BUSY(BUSY),
-        .sample_edge(sample_edge)
+        .BUSY(BUSY)
     );
 
 endmodule
