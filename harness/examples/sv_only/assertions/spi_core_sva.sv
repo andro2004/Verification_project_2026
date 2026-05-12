@@ -11,11 +11,23 @@ module spi_core_sva (
     input logic clk, rst_n,
     input logic sclk, mosi, cpol, cpha,
     input logic [3:0] ss_n,
-    // Add required internal taps...
+    // Internal taps from the DUT clock generator
+    input logic [16:0] sclk_cnt,
+    input logic        sclk_phase,
+    input logic [15:0] cfg_clk_div,
+    
     input wire BUSY, 
-    input logic [5:0] width, // Width can be 8,16 or 32 bits
-    input wire sample_edge
+    input logic [5:0] width // width in bits (8, 16, 32)
 );
+
+    // Re-derive the lead/trail indicators from internal registers (same logic as RTL)
+    wire leading_strobe  = (sclk_cnt == cfg_clk_div) && (sclk_phase == 1'b0);
+    wire trailing_strobe = (sclk_cnt == cfg_clk_div) && (sclk_phase == 1'b1);
+
+    // Define the sampling edge based on CPHA (Req R5/R6)
+    // CPHA=0: Sample on Leading Edge
+    // CPHA=1: Sample on Trailing Edge
+    wire sample_edge = (cpha == 1'b0) ? leading_strobe : trailing_strobe;
 
     logic [5:0] pulse_cnt;
     
@@ -47,12 +59,13 @@ module spi_core_sva (
         else $error("MOSI unstable on sample edge!");
 
     // a_ss_stable (Req R20): SS_n held asserted for the entire WIDTH-bit transfer.
+    // Each individual SS bit must remain stable if asserted.
     property spi_ss_held_low;
         @(posedge clk)
-        BUSY |-> (ss_n != 4'b1111);
+        BUSY |-> $stable(ss_n);
     endproperty
     a_ss_stable: assert property(spi_ss_held_low)
-        else $error("SS_n deasserted during active transfer! SS_n=%b", ss_n);
+        else $error("SS_n glitch/deassert detected during active transfer! SS_n=%b", ss_n);
     
     // a_xfer_length (Req R7): Verify that a transfer takes exactly WIDTH SCLK cycles.
     property a_xfer_length_dynamic;
