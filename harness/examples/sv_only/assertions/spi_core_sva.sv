@@ -21,7 +21,7 @@ module spi_core_sva (
 );
 
     // Re-derive the lead/trail indicators from internal registers (same logic as RTL)
-    wire leading_strobe  = (sclk_cnt == cfg_clk_div) && (sclk_phase == 1'b0);
+    wire leading_strobe  = (sclk_cnt == cfg_clk_div) && (sclk_phase == 1'b0);       // sclk_phase refers to leading or trailing edge, and when clk_div cycles, passes, sckl toggles
     wire trailing_strobe = (sclk_cnt == cfg_clk_div) && (sclk_phase == 1'b1);
 
     // Define the sampling edge based on CPHA (Req R5/R6)
