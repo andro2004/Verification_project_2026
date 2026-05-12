@@ -26,8 +26,8 @@ module spi_slave_bfm (
     logic sclk_q;   // SCLK previous value for edge detection
     int   bit_idx;  // which bit of miso_data is currently on the line
 
-    logic CPOL  = mode[1];
-    logic CPHA  = mode[0];
+    wire CPOL  = mode[1];
+    wire CPHA  = mode[0];
     wire sample_posedge = (CPOL == CPHA);
     wire ss_act = (spi.ss_n != 4'hF);
     int bits_count;
