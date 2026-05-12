@@ -33,7 +33,7 @@ class fifo_stress_test;
             $fatal(1, "Failed to randomize fifo txn");
 
         spi_sequence_lib::configure_dut(rand_txn);
-        spi_sequence_lib::target_ss(rand_txn.ss_en);
+        spi_sequence_lib::target_ss(4'b0000); // Do NOT assert SS yet! We want to fill the FIFO.
 
         // Configure the BFM Slave to match the randomized DUT configuration
         tb_top.bfm_mode      = rand_txn.mode;
@@ -71,6 +71,10 @@ class fifo_stress_test;
         // STEP 3: Wait for all 8 items to transfer to RX FIFO
         // ---------------------------------------------------------------------
         $display("[INFO] fifo_stress_test: Waiting for 8 transfers to complete");
+        
+        // NOW assert SS to kick off the transfers
+        spi_sequence_lib::target_ss(rand_txn.ss_en);
+
         for (int i = 0; i < 8; i++) begin
             ref_model.predict_transfer(tx_data_arr[i], 32'h0, rand_txn.loopback, rand_txn.width, rand_txn.lsb_first);
             ref_model.mark_transfer_start();
