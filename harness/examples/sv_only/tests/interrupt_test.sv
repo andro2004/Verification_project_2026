@@ -15,6 +15,9 @@ class interrupt_test;
 
     static task run(ref spi_ref_model ref_model, ref spi_coverage_col coverage);
         bit [31:0] int_stat_val;
+        bit [31:0] bfm_pat;
+        bit [31:0] tx_data_q[$];
+        bit [31:0] rx_ovf_val, w1c_val;
         spi_txn txn;
 
         $display("[INFO] interrupt_test: starting");
@@ -22,25 +25,22 @@ class interrupt_test;
         spi_sequence_lib::reset_dut();
         ref_model.reset();
 
+        bfm_pat = $urandom();
+
         // ---------------------------------------------------------------------
         // 1. Setup
         // ---------------------------------------------------------------------
-        tb_top.u_apb_bfm.apb_write(8'h10, 32'h0000_0002); // CLK_DIV = 2
-        ref_model.apb_write(8'h10, 32'h0000_0002);
+        txn = new();
+        if (!txn.randomize() with { clk_div == 2; ss_en == 4'b0001; })
+            $fatal(1, "Failed to randomize txn");
 
-        tb_top.u_apb_bfm.apb_write(8'h18, 32'h0000_001F); // Unmask all interrupts
-        ref_model.apb_write(8'h18, 32'h0000_001F);
+        spi_sequence_lib::configure_dut(txn);
+        spi_sequence_lib::target_ss(txn.ss_en);
 
-        tb_top.u_apb_bfm.apb_write(8'h00, 32'h0000_0003); // EN=1, Mode 0
-        ref_model.apb_write(8'h00, 32'h0000_0003);
-
-        tb_top.u_apb_bfm.apb_write(8'h14, 32'h0000_0001); // SS_EN
-        ref_model.apb_write(8'h14, 32'h0000_0001);
-
-        tb_top.bfm_mode      = 2'b00;
-        tb_top.bfm_pattern   = 32'h0000_0055;
-        tb_top.bfm_lsb_first = 1'b0;
-        tb_top.bfm_width     = 2'b00;
+        tb_top.bfm_mode      = txn.mode;
+        tb_top.bfm_pattern   = bfm_pat;
+        tb_top.bfm_lsb_first = txn.lsb_first;
+        tb_top.bfm_width     = txn.width;
 
         // Clear all interrupts initially
         tb_top.u_apb_bfm.apb_write(8'h1C, 32'h0000_001F);
@@ -52,8 +52,10 @@ class interrupt_test;
         // Push 9 items fast to TX FIFO. Since CLK_DIV=2, transfer takes time,
         // so the 9th item will overflow before the first transfer finishes.
         for (int i=0; i<9; i++) begin
-            tb_top.u_apb_bfm.apb_write(8'h08, 32'hBB);
-            ref_model.apb_write(8'h08, 32'hBB);
+            bit [31:0] val = $urandom();
+            tx_data_q.push_back(val);
+            tb_top.u_apb_bfm.apb_write(8'h08, val);
+            ref_model.apb_write(8'h08, val);
         end
 
         // Check TX_OVF is set
@@ -71,7 +73,7 @@ class interrupt_test;
         // ---------------------------------------------------------------------
         // Since we pushed 9 items, 8 were accepted and are transferring.
         for (int i=0; i<8; i++) begin
-            ref_model.predict_transfer(32'hBB, 32'h55, 0, 2'b00, 0);
+            ref_model.predict_transfer(tx_data_q[i], bfm_pat, txn.loopback, txn.width, txn.lsb_first);
             ref_model.mark_transfer_start();
             
             // Wait for TRANSFER_DONE
@@ -83,7 +85,7 @@ class interrupt_test;
             tb_top.u_apb_bfm.apb_write(8'h1C, 32'h0000_0010);
             
             // Mark complete in ref model
-            ref_model.mark_transfer_done(32'h55);
+            ref_model.mark_transfer_done(bfm_pat);
             // Also sync W1C to ref_model
             ref_model.apb_write(8'h1C, 32'h0000_0010);
         end
@@ -102,16 +104,17 @@ class interrupt_test;
         // 4. Trigger RX_OVF (bit 3)
         // ---------------------------------------------------------------------
         // Push 1 more item. RX FIFO is full, so when it completes, RX_OVF fires.
-        tb_top.u_apb_bfm.apb_write(8'h08, 32'hCC);
-        ref_model.apb_write(8'h08, 32'hCC);
-        ref_model.predict_transfer(32'hCC, 32'h55, 0, 2'b00, 0);
+        rx_ovf_val = $urandom();
+        tb_top.u_apb_bfm.apb_write(8'h08, rx_ovf_val);
+        ref_model.apb_write(8'h08, rx_ovf_val);
+        ref_model.predict_transfer(rx_ovf_val, bfm_pat, txn.loopback, txn.width, txn.lsb_first);
         ref_model.mark_transfer_start();
 
         do begin
             tb_top.u_apb_bfm.apb_read(8'h1C, int_stat_val);
         end while (int_stat_val[4] == 1'b0);
 
-        ref_model.mark_transfer_done(32'h55);
+        ref_model.mark_transfer_done(bfm_pat);
         
         // Verify RX_OVF is set
         tb_top.u_apb_bfm.apb_read(8'h1C, int_stat_val);
@@ -152,10 +155,11 @@ class interrupt_test;
         // ---------------------------------------------------------------------
         // We will sweep the delay to try and hit the exact cycle where
         // TRANSFER_DONE fires while simultaneously writing W1C via APB.
-        for (int delay = 10; delay <= 40; delay++) begin
-            tb_top.u_apb_bfm.apb_write(8'h08, 32'hDD);
-            ref_model.apb_write(8'h08, 32'hDD);
-            ref_model.predict_transfer(32'hDD, 32'h55, 0, 2'b00, 0);
+        for (int delay = 35; delay <= 65; delay++) begin
+            w1c_val = $urandom();
+            tb_top.u_apb_bfm.apb_write(8'h08, w1c_val);
+            ref_model.apb_write(8'h08, w1c_val);
+            ref_model.predict_transfer(w1c_val, bfm_pat, txn.loopback, txn.width, txn.lsb_first);
             ref_model.mark_transfer_start();
 
             // Delay a specific number of cycles
@@ -167,7 +171,7 @@ class interrupt_test;
             // Wait for transfer to fully finish if it hasn't
             spi_sequence_lib::wait_idle();
             
-            ref_model.mark_transfer_done(32'h55);
+            ref_model.mark_transfer_done(bfm_pat);
             // We don't sync this specific W1C to ref_model here because we 
             // want to let the untimed model just accumulate the flag.
             // If the DUT incorrectly cleared it, check_int_stat will fail!

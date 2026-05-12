@@ -47,8 +47,10 @@ class sanity_test;
         $display("[INFO] sanity_test: starting");
 
         // Configure BFM slave pattern and mode
-        tb_top.bfm_mode    = 2'b00;           // CPOL=0 CPHA=0
-        tb_top.bfm_pattern = 8'hA5;
+        tb_top.bfm_mode      = 2'b00;           // CPOL=0 CPHA=0
+        tb_top.bfm_pattern   = 8'hA5;
+        tb_top.bfm_lsb_first = 1'b0;
+        tb_top.bfm_width     = 2'b00;
 
         // Enable DUT with loopback OFF, master, mode 0, MSB-first, 8-bit
         //   CTRL fields (from spec):
@@ -65,6 +67,9 @@ class sanity_test;
         ref_model.predict_single_byte(.tx_byte(8'h5A),
                                       .miso_pattern(tb_top.bfm_pattern),
                                       .loopback(1'b0));
+        
+        ref_model.mark_transfer_start();
+
         tb_top.u_apb_bfm.apb_write(APB_TX_DATA, 32'h0000_005A);
         // SS_CTRL layout: [3:0]=ss_en, [7:4]=ss_val.  SS_n = ~ss_en | ss_val.
         // To assert lane 0 LOW we need ss_en[0]=1 AND ss_val[0]=0, i.e. 0x01.
@@ -76,8 +81,16 @@ class sanity_test;
             if (rd[0] == 1'b0) break;
         end
 
+        ref_model.mark_transfer_done(tb_top.bfm_pattern);
+
         tb_top.u_apb_bfm.apb_read(APB_RX_DATA, rd);
         ref_model.check_rx(rd);
+
+        tb_top.u_apb_bfm.apb_read(APB_STATUS, rd);
+        ref_model.check_status(rd);
+
+        tb_top.u_apb_bfm.apb_read(APB_INT_STAT, rd);
+        ref_model.check_int_stat(rd);
 
         tb_top.u_apb_bfm.apb_write(APB_SS_CTRL, 32'h0000_0000);
 
