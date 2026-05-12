@@ -3,7 +3,7 @@
 // -----------------------------------------------------------------------------
 // Purpose: Stress the TX/RX FIFOs. Push 8 entries to fill TX, let them transfer
 // to fill RX, overflow both, verify flags (empty, full, overflow), and ensure
-// data integrity across the FIFOs.
+// data integrity across the FIFOs using random payloads.
 // =============================================================================
 
 `ifndef FIFO_STRESS_TEST_SV
@@ -16,7 +16,9 @@
 class fifo_stress_test;
     static task run(ref spi_ref_model ref_model, ref spi_coverage_col coverage);
         bit [31:0] rx_word, status_val, int_stat_val;
-        spi_txn txn;
+        bit [31:0] tx_data_arr[8];
+        bit [31:0] tx_ovf_val, rx_ovf_val;
+        spi_txn_fifo rand_txn;
 
         $display("[INFO] fifo_stress_test: starting");
 
@@ -26,25 +28,27 @@ class fifo_stress_test;
         // ---------------------------------------------------------------------
         // STEP 0: Configuration
         // ---------------------------------------------------------------------
-        txn = new();
-        txn.mode       = 2'b00;
-        txn.width      = 2'b00; // 8-bit
-        txn.lsb_first  = 1'b0;
-        txn.loopback   = 1'b1;  // Loopback to reliably check data integrity
-        txn.clk_div    = 16'd4;
-        txn.delay_cfg  = 8'd0;
-        txn.ss_en      = 4'b0001;
+        rand_txn = new();
+        if (!rand_txn.randomize() with { loopback == 1'b1; ss_en == 4'b0001; })
+            $fatal(1, "Failed to randomize fifo txn");
 
-        spi_sequence_lib::configure_dut(txn);
-        spi_sequence_lib::target_ss(txn.ss_en);
+        spi_sequence_lib::configure_dut(rand_txn);
+        spi_sequence_lib::target_ss(rand_txn.ss_en);
+
+        // Configure the BFM Slave to match the randomized DUT configuration
+        tb_top.bfm_mode      = rand_txn.mode;
+        tb_top.bfm_pattern   = $urandom();
+        tb_top.bfm_lsb_first = rand_txn.lsb_first;
+        tb_top.bfm_width     = rand_txn.width;
 
         // ---------------------------------------------------------------------
         // STEP 1: Fill TX FIFO to capacity (8 items) & Verify TX_FULL
         // ---------------------------------------------------------------------
         $display("[INFO] fifo_stress_test: Filling TX FIFO with 8 items");
         for (int i = 0; i < 8; i++) begin
-            tb_top.u_apb_bfm.apb_write(8'h08, 32'h10 + i);
-            ref_model.apb_write(8'h08, 32'h10 + i);
+            tx_data_arr[i] = $urandom();
+            tb_top.u_apb_bfm.apb_write(8'h08, tx_data_arr[i]);
+            ref_model.apb_write(8'h08, tx_data_arr[i]);
             coverage.sample_fifo(ref_model.tx_fifo.size(), ref_model.rx_fifo.size());
         end
 
@@ -56,8 +60,9 @@ class fifo_stress_test;
         // STEP 2: Trigger TX_OVF by pushing a 9th item
         // ---------------------------------------------------------------------
         $display("[INFO] fifo_stress_test: Triggering TX_OVF");
-        tb_top.u_apb_bfm.apb_write(8'h08, 32'hFF);
-        ref_model.apb_write(8'h08, 32'hFF);
+        tx_ovf_val = $urandom();
+        tb_top.u_apb_bfm.apb_write(8'h08, tx_ovf_val);
+        ref_model.apb_write(8'h08, tx_ovf_val);
 
         spi_sequence_lib::apb_read_sync(8'h04, status_val);
         ref_model.check_status(status_val);
@@ -67,7 +72,7 @@ class fifo_stress_test;
         // ---------------------------------------------------------------------
         $display("[INFO] fifo_stress_test: Waiting for 8 transfers to complete");
         for (int i = 0; i < 8; i++) begin
-            ref_model.predict_transfer(32'h10 + i, 32'h0, 1'b1, 2'b00, 1'b0); // Loopback
+            ref_model.predict_transfer(tx_data_arr[i], 32'h0, rand_txn.loopback, rand_txn.width, rand_txn.lsb_first);
             ref_model.mark_transfer_start();
             
             // Wait for TRANSFER_DONE
@@ -91,10 +96,11 @@ class fifo_stress_test;
         // STEP 4: Trigger RX_OVF by pushing 1 more item while RX is full
         // ---------------------------------------------------------------------
         $display("[INFO] fifo_stress_test: Triggering RX_OVF");
-        tb_top.u_apb_bfm.apb_write(8'h08, 32'hEE);
-        ref_model.apb_write(8'h08, 32'hEE);
+        rx_ovf_val = $urandom();
+        tb_top.u_apb_bfm.apb_write(8'h08, rx_ovf_val);
+        ref_model.apb_write(8'h08, rx_ovf_val);
         
-        ref_model.predict_transfer(32'hEE, 32'h0, 1'b1, 2'b00, 1'b0);
+        ref_model.predict_transfer(rx_ovf_val, 32'h0, rand_txn.loopback, rand_txn.width, rand_txn.lsb_first);
         ref_model.mark_transfer_start();
         
         do begin

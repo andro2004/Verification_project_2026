@@ -207,6 +207,26 @@ class width_coverage_test;
         do_width_xfer("mode3_w32", 2'b11, 2'b10, 1'b0,
                       32'h5A5A_5A5A, 32'hA5A5_A5A5, ref_model, coverage);
 
+        // =====================================================================
+        // CONSTRAINED RANDOM TRANSACTIONS
+        // =====================================================================
+        $display("[INFO] width_coverage_test: --- 20 Constrained Random Transfers ---");
+        for (int i = 0; i < 20; i++) begin
+            spi_txn rand_txn = new();
+            if (!rand_txn.randomize()) $fatal(1, "Failed to randomize txn");
+            
+            do_width_xfer(
+                $sformatf("rand_%0d", i), 
+                rand_txn.mode, 
+                rand_txn.width, 
+                rand_txn.lsb_first, 
+                rand_txn.tx_data, 
+                $urandom(), 
+                ref_model, 
+                coverage
+            );
+        end
+
         $display("[INFO] width_coverage_test: finished, errors=%0d",
                  ref_model.error_count);
     endtask

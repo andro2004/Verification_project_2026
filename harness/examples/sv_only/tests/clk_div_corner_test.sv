@@ -37,11 +37,11 @@ class clk_div_corner_test;
         txn.clk_div    = div_val;
         txn.delay_cfg  = 8'd0;
         txn.ss_en      = 4'b0001;
-        txn.tx_data    = 32'h0000_00AA; 
+        txn.tx_data    = $urandom(); 
 
         // Setup Slave BFM
         tb_top.bfm_mode      = 2'b00;
-        tb_top.bfm_pattern   = 32'h0000_0055;
+        tb_top.bfm_pattern   = $urandom();
         tb_top.bfm_lsb_first = 1'b0;
         tb_top.bfm_width     = 2'b00;
 
@@ -110,10 +110,10 @@ class clk_div_corner_test;
         txn.clk_div    = 16'd65535;
         txn.delay_cfg  = 8'd0;
         txn.ss_en      = 4'b0001;
-        txn.tx_data    = 32'h0000_00AA;
+        txn.tx_data    = $urandom();
 
         tb_top.bfm_mode      = 2'b00;
-        tb_top.bfm_pattern   = 32'h0000_0055;
+        tb_top.bfm_pattern   = $urandom();
         tb_top.bfm_lsb_first = 1'b0;
         tb_top.bfm_width     = 2'b00;
 
@@ -147,15 +147,22 @@ class clk_div_corner_test;
     endtask
 
     static task run(ref spi_ref_model ref_model, ref spi_coverage_col coverage);
+        spi_txn_clkdiv_corner rand_txn = new();
+        
         $display("[INFO] clk_div_corner_test: starting");
 
-        do_clkdiv_xfer("div_0", 16'd0, ref_model, coverage);
-        do_clkdiv_xfer("div_1", 16'd1, ref_model, coverage);
-        do_clkdiv_xfer("div_2", 16'd2, ref_model, coverage);
-        do_clkdiv_xfer("div_3", 16'd3, ref_model, coverage);
-        do_clkdiv_xfer("div_255", 16'd255, ref_model, coverage);
-        do_clkdiv_xfer("div_1024", 16'd1024, ref_model, coverage);
-        
+        // Loop 15 times, letting the constraints pick random corner clock dividers
+        for (int i=0; i<15; i++) begin
+            if (!rand_txn.randomize()) $fatal(1, "Failed to randomize clkdiv txn");
+            
+            if (rand_txn.clk_div == 16'd65535) begin
+                test_65535(ref_model, coverage);
+            end else begin
+                do_clkdiv_xfer($sformatf("rand_clk_%0d", i), rand_txn.clk_div, ref_model, coverage);
+            end
+        end
+
+        // Ensure we hit the 65535 specifically at least once just in case
         $display("[INFO] clk_div_corner_test: testing 65535 specifically for 1 cycle");
         test_65535(ref_model, coverage);
 
