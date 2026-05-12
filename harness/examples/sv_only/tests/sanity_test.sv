@@ -57,8 +57,13 @@ class sanity_test;
         //     [0] EN, [1] MSTR, [3:2] MODE, [4] LSB_FIRST, [5] LOOPBACK,
         //     [7:6] WIDTH (00=8b)
         tb_top.u_apb_bfm.apb_write(APB_CTRL,    32'h0000_0003);  // EN, MSTR
+        ref_model.apb_write(APB_CTRL,    32'h0000_0003);
+        
         tb_top.u_apb_bfm.apb_write(APB_CLK_DIV, 32'h0000_0004);  // divide /4
+        ref_model.apb_write(APB_CLK_DIV, 32'h0000_0004);
+        
         tb_top.u_apb_bfm.apb_write(APB_INT_EN,  32'h0000_000F);
+        ref_model.apb_write(APB_INT_EN,  32'h0000_000F);
 
         coverage.sample_config(.mode(2'b00), .lsb_first(1'b0), .width(2'b00),
     .loopback(1'b0));
@@ -71,9 +76,11 @@ class sanity_test;
         ref_model.mark_transfer_start();
 
         tb_top.u_apb_bfm.apb_write(APB_TX_DATA, 32'h0000_005A);
+        ref_model.apb_write(APB_TX_DATA, 32'h0000_005A);
         // SS_CTRL layout: [3:0]=ss_en, [7:4]=ss_val.  SS_n = ~ss_en | ss_val.
         // To assert lane 0 LOW we need ss_en[0]=1 AND ss_val[0]=0, i.e. 0x01.
         tb_top.u_apb_bfm.apb_write(APB_SS_CTRL, 32'h0000_0001);  // assert ss[0] LOW
+        ref_model.apb_write(APB_SS_CTRL, 32'h0000_0001);
 
         // Simple busy-poll via STATUS.BUSY (bit 0)
         repeat (500) begin
@@ -84,15 +91,18 @@ class sanity_test;
         ref_model.mark_transfer_done(tb_top.bfm_pattern);
 
         tb_top.u_apb_bfm.apb_read(APB_RX_DATA, rd);
+        void'(ref_model.apb_read(APB_RX_DATA)); // Pop RX_FIFO in the ref_model!
         ref_model.check_rx(rd);
 
         tb_top.u_apb_bfm.apb_read(APB_STATUS, rd);
+        void'(ref_model.apb_read(APB_STATUS));
         ref_model.check_status(rd);
 
         tb_top.u_apb_bfm.apb_read(APB_INT_STAT, rd);
         ref_model.check_int_stat(rd);
 
         tb_top.u_apb_bfm.apb_write(APB_SS_CTRL, 32'h0000_0000);
+        ref_model.apb_write(APB_SS_CTRL, 32'h0000_0000);
 
         $display("[INFO] sanity_test: finished, errors=%0d",
                  ref_model.error_count);
