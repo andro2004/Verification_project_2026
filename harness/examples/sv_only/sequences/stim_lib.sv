@@ -282,12 +282,32 @@ class spi_sequence_lib;
         rx_q = {};   // clear output queue
 
         // Read STATUS, pop while RX_EMPTY=0
-        tb_top.u_apb_bfm.apb_read(SL_STATUS, status);
+        apb_read_sync(SL_STATUS, status);
         while (!status[SL_STATUS_RX_EMPTY]) begin
-            tb_top.u_apb_bfm.apb_read(SL_RX_DATA, rdata);
+            apb_read_sync(SL_RX_DATA, rdata);
             rx_q.push_back(rdata);
-            tb_top.u_apb_bfm.apb_read(SL_STATUS, status);
+            apb_read_sync(SL_STATUS, status);
         end
+    endtask
+
+    // =========================================================================
+    // apb_read_sync
+    // -------------------------------------------------------------------------
+    // Reads an APB register from both hardware and the reference model.
+    // This keeps the SW model state aligned with the real DUT state.
+    // For RX_DATA reads, both sides pop one entry from their RX FIFO.
+    // =========================================================================
+    static task apb_read_sync(input bit [7:0] addr,
+                              output bit [31:0] data,
+                              ref spi_ref_model ref_model);
+        tb_top.u_apb_bfm.apb_read(addr, data);
+        ref_model.apb_read(addr);
+    endtask
+
+    // Wrapper variant using the default reference model instance.
+    static task apb_read_sync(input bit [7:0] addr,
+                              output bit [31:0] data);
+        apb_read_sync(addr, data, tb_top.u_ref);
     endtask
 
     // =========================================================================
@@ -320,7 +340,7 @@ class spi_sequence_lib;
     // Tests can inspect individual bits using the SL_STATUS_* localparams.
     // =========================================================================
     static task read_status(output bit [31:0] status);
-        tb_top.u_apb_bfm.apb_read(SL_STATUS, status);
+        apb_read_sync(SL_STATUS, status);
     endtask
 
     // =========================================================================

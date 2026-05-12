@@ -22,12 +22,14 @@ The `spi_sequence_lib` class provides:
 - **High-level APB tasks** — abstracts repeated register writes (configure_dut, push_single, target_ss, etc.).
 - **Transfer choreography** — sequences like `do_transfer` and `do_burst_transfer` bundle multiple tasks.
 - **Model mirroring** — automatically calls `ref_model.apb_write(...)` when tasks modify registers.
+- **Synchronized reads** — `pop_rx_burst` and `read_status` now use a synchronized APB read helper so both the DUT and `tb_top.u_ref` consume the same register/FIFO state.
 
 ### Integration Principle
 1. **Before a transfer:** Use `ref_model.predict_transfer(...)` to add expected TX/RX values to predictor queues.
 2. **During execution:** Use `spi_sequence_lib` tasks to drive the DUT (which also mirrors writes to the model).
-3. **After a transfer:** Use `ref_model.mark_transfer_done(...)` or `spi_transfer_complete(...)` to pop TX, push RX, and update status/IRQs.
-4. **Scoreboard checks:** Call `ref_model.check_tx()`, `check_rx()`, `check_status()`, etc. to validate DUT behavior.
+3. **During readout:** Use `spi_sequence_lib::pop_rx_burst(...)` or `spi_sequence_lib::apb_read_sync(...)` so RX_DATA reads pop both the DUT FIFO and the model FIFO.
+4. **After a transfer:** Use `ref_model.mark_transfer_done(...)` only when you are modeling transfer completion inside the reference model itself. For real DUT tests, the model should stay aligned by mirrored APB writes and synchronized APB reads, not by manually pushing RX in the predictor path.
+5. **Scoreboard checks:** Call `ref_model.check_tx()`, `check_rx()`, `check_status()`, etc. to validate DUT behavior.
 
 ---
 
@@ -118,18 +120,16 @@ spi_sequence_lib::wait_idle();
 ```systemverilog
 bit [31:0] observed_rx;
 
-// Call this to tell the model:
-//   "I have observed this RX (MISO) value; please pop the TX FIFO,
-//    push to the RX FIFO, check FIFOs full, and set TRANSFER_DONE IRQ"
-tb_top.u_ref.mark_transfer_done(observed_rx);
-
-// Internally, mark_transfer_done calls spi_transfer_complete(observed_rx), which:
-//   1. Pops TX from model's TX FIFO
-//   2. Pushes RX to model's RX FIFO
-//   3. Sets or checks FULL flags
-//   4. Sets INT_STAT[TRANSFER_DONE]
-//   5. Clears BUSY if TX FIFO is now empty
+// Read the DUT RX_DATA register through the synchronized helper.
+// This pops the DUT RX FIFO and also pops the model RX FIFO, so the two
+// states stay aligned.
+spi_sequence_lib::apb_read_sync(SL_RX_DATA, observed_rx);
 ```
+
+For real DUT tests, that synchronized read is usually the right state update.
+`mark_transfer_done(...)` is still useful when you want to advance the model's
+internal transfer bookkeeping directly, but it is not the same thing as draining
+the observed RX FIFO from hardware.
 
 ### Step 7: Deassert Slave-Select and Read RX Data
 
@@ -137,12 +137,11 @@ tb_top.u_ref.mark_transfer_done(observed_rx);
 // Deassert SS_n after the transfer completes
 spi_sequence_lib::target_ss(4'b0000);
 
-// Read the RX data from the DUT's APB interface
+// Read the RX data through the synchronized helper
 bit [31:0] dut_rx_data;
-tb_top.u_apb_bfm.apb_read(SL_RX_DATA, dut_rx_data);
+spi_sequence_lib::apb_read_sync(SL_RX_DATA, dut_rx_data);
 
-// The model's RX FIFO was updated in Step 6
-// Now compare them
+// The model's RX FIFO was popped too, so the real HW and SW state match
 ```
 
 ### Step 8: Scoreboard Checks
@@ -316,6 +315,11 @@ end
 - `mark_transfer_done(rx_miso_val)` — pop TX, push RX, update status/IRQ.
 - `spi_transfer_complete(rx_miso_val)` — internal call; same effect as `mark_transfer_done`.
 
+### Synchronized Readout
+- `spi_sequence_lib::apb_read_sync(addr, data)` — read from hardware and the reference model in the same call.
+- `spi_sequence_lib::pop_rx_burst(rx_q)` — drains RX_DATA from both hardware and the reference model.
+- `spi_sequence_lib::read_status(status)` — returns STATUS using the synchronized read path.
+
 ### Scoreboard Checks
 - `check_tx(observed)` — validate MOSI against prediction.
 - `check_rx(observed)` — validate MISO against prediction.
@@ -348,6 +352,6 @@ end
 
 - **Forgetting to predict:** Call `predict_transfer()` BEFORE each transfer, or scoreboard checks will fail with "no prediction" errors.
 - **Wrong MISO pattern:** Set `tb_top.bfm_pattern` to match what you predicted, or RX data will not match.
-- **Not marking transfer done:** Call `mark_transfer_done()` or the model's RX FIFO won't update.
+- **Not using synchronized reads:** If you read RX_DATA directly from hardware without also popping the model, the DUT and model FIFOs will diverge.
 - **Mixing wrapper and explicit ref calls:** Use one approach consistently in a test to avoid confusion.
 - **INT_STAT W1C races:** Use `clear_interrupts()` (which reads then writes) to avoid missing events.
