@@ -1,0 +1,229 @@
+m255
+K4
+z2
+!s11f vlog 2021.1 2021.01, Jan 19 2021
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z0 dD:/Kolya/Senior-1/Second Semester/Verification/Project/final_project_student
+Yapb_if
+Z1 DXx6 sv_std 3 std 0 22 9oUSJO;AeEaW`l:M@^WG92
+Z2 !s110 1778624912
+!i10b 1
+!s100 HOPnIf?4Y7eU[zl^F5^Re2
+I4:<7oIUOPV?1oBZo]MJVG2
+S1
+R0
+Z3 w1778624848
+8harness/apb_if.sv
+Fharness/apb_if.sv
+!i122 0
+L0 14 0
+Z4 VDg1SIo80bB@j0V0VzS_@n1
+Z5 OL;L;2021.1;73
+r1
+!s85 0
+31
+Z6 !s108 1778624912.000000
+!s107 harness/examples/sv_only/env/../tests/coverage_smoke_test.sv|harness/examples/sv_only/env/../tests/fifo_stress_test.sv|harness/examples/sv_only/env/../tests/interrupt_test.sv|harness/examples/sv_only/env/../tests/clk_div_corner_test.sv|harness/examples/sv_only/env/../tests/delay_transfer_test.sv|harness/examples/sv_only/env/../tests/width_coverage_test.sv|harness/examples/sv_only/env/../tests/mode_coverage_test.sv|harness/examples/sv_only/env/../tests/reg_access_test.sv|harness/examples/sv_only/env/../tests/error_injection_test.sv|harness/examples/sv_only/env/../tests/loopback_test.sv|harness/examples/sv_only/env/../tests/randomized_sanity_test.sv|harness/examples/sv_only/env/../tests/sanity_test.sv|harness/examples/sv_only/env/../sequences/stim_lib.sv|harness/examples/sv_only/env/../env/coverage.sv|harness/examples/sv_only/env/../env/ref_model.sv|harness/examples/sv_only/tb/tb_top.sv|harness/dut_wrapper.sv|golden_rtl/spi_master.sv|golden_rtl/apb_regfile.sv|golden_rtl/spi_core.sv|harness/spi_if.sv|harness/apb_if.sv|
+Z7 !s90 -sv|-timescale=1ns/1ps|+acc=rn|+define+SIM|+incdir+harness|+incdir+harness/examples/sv_only/env|+incdir+harness/examples/sv_only/tb|+incdir+harness/examples/sv_only/sequences|+incdir+harness/examples/sv_only/tests|+incdir+harness/examples/sv_only/assertions|harness/apb_if.sv|harness/spi_if.sv|golden_rtl/spi_core.sv|golden_rtl/apb_regfile.sv|golden_rtl/spi_master.sv|harness/dut_wrapper.sv|harness/examples/sv_only/tb/tb_top.sv|
+!i113 0
+Z8 o-sv -timescale=1ns/1ps +acc=rn -L mtiAvm -L mtiRnm -L mtiOvm -L mtiUvm -L mtiUPF -L infact
+Z9 !s92 -sv -timescale=1ns/1ps +acc=rn +define+SIM +incdir+harness +incdir+harness/examples/sv_only/env +incdir+harness/examples/sv_only/tb +incdir+harness/examples/sv_only/sequences +incdir+harness/examples/sv_only/tests +incdir+harness/examples/sv_only/assertions -L mtiAvm -L mtiRnm -L mtiOvm -L mtiUvm -L mtiUPF -L infact
+Z10 tCvgOpt 0
+vapb_regfile
+R1
+R2
+!i10b 1
+!s100 PZUKAJ[D4`11^kLdBiSaZ3
+IS4cnOHc6mDc24[dR[3=ZK1
+S1
+R0
+R3
+8golden_rtl/apb_regfile.sv
+Fgolden_rtl/apb_regfile.sv
+!i122 0
+L0 23 314
+R4
+R5
+r1
+!s85 0
+31
+R6
+Z11 !s107 harness/examples/sv_only/env/../tests/coverage_smoke_test.sv|harness/examples/sv_only/env/../tests/fifo_stress_test.sv|harness/examples/sv_only/env/../tests/interrupt_test.sv|harness/examples/sv_only/env/../tests/clk_div_corner_test.sv|harness/examples/sv_only/env/../tests/delay_transfer_test.sv|harness/examples/sv_only/env/../tests/width_coverage_test.sv|harness/examples/sv_only/env/../tests/mode_coverage_test.sv|harness/examples/sv_only/env/../tests/reg_access_test.sv|harness/examples/sv_only/env/../tests/error_injection_test.sv|harness/examples/sv_only/env/../tests/loopback_test.sv|harness/examples/sv_only/env/../tests/randomized_sanity_test.sv|harness/examples/sv_only/env/../tests/sanity_test.sv|harness/examples/sv_only/env/../sequences/stim_lib.sv|harness/examples/sv_only/env/../env/coverage.sv|harness/examples/sv_only/env/../env/ref_model.sv|harness/examples/sv_only/tb/tb_top.sv|harness/dut_wrapper.sv|golden_rtl/spi_master.sv|golden_rtl/apb_regfile.sv|golden_rtl/spi_core.sv|harness/spi_if.sv|harness/apb_if.sv|
+R7
+!i113 0
+R8
+R9
+R10
+vdut_wrapper
+R1
+R2
+!i10b 1
+!s100 nA:32XfBD245kgXga`kWk0
+I>IV:dR42jz@lYh]DR8Qjh0
+S1
+R0
+R3
+8harness/dut_wrapper.sv
+Fharness/dut_wrapper.sv
+!i122 0
+L0 41 24
+R4
+R5
+r1
+!s85 0
+31
+R6
+R11
+R7
+!i113 0
+R8
+R9
+R10
+vspi_core
+R1
+R2
+!i10b 1
+!s100 ?6g;4ejdT8oPza7:hR>_m1
+II>gebUV@UhHZo>6gQWMfS1
+S1
+R0
+R3
+8golden_rtl/spi_core.sv
+Fgolden_rtl/spi_core.sv
+!i122 0
+L0 19 247
+R4
+R5
+r1
+!s85 0
+31
+R6
+R11
+R7
+!i113 0
+R8
+R9
+R10
+Yspi_if
+R1
+R2
+!i10b 1
+!s100 1G@IMXBm?o5S2ScPMW`942
+IO=PCR513DD1lU@B2FV@7Y1
+S1
+R0
+R3
+8harness/spi_if.sv
+Fharness/spi_if.sv
+!i122 0
+L0 13 0
+R4
+R5
+r1
+!s85 0
+31
+R6
+R11
+R7
+!i113 0
+R8
+R9
+R10
+vspi_master
+R1
+R2
+!i10b 1
+!s100 oE@T_YN<4`iPil9FDlYPD0
+IEHBfmI7cZYjQc<l>=I6d@0
+S1
+R0
+R3
+8golden_rtl/spi_master.sv
+Fgolden_rtl/spi_master.sv
+!i122 0
+L0 26 123
+R4
+R5
+r1
+!s85 0
+31
+R6
+R11
+R7
+!i113 0
+R8
+R9
+R10
+vtb_top
+R1
+DXx4 work 14 tb_top_sv_unit 0 22 8QRhhNb9zKYCohSImYXeG1
+R2
+R4
+r1
+!s85 0
+!i10b 1
+!s100 bAB6ZLa9YG?;kW=iFBdW21
+I3VC275@8?F4_Wd:18oQ7P0
+!s105 tb_top_sv_unit
+S1
+R0
+R3
+Z12 8harness/examples/sv_only/tb/tb_top.sv
+Z13 Fharness/examples/sv_only/tb/tb_top.sv
+!i122 0
+L0 24 210
+R5
+31
+R6
+R11
+R7
+!i113 0
+R8
+R9
+R10
+Xtb_top_sv_unit
+R1
+R2
+V8QRhhNb9zKYCohSImYXeG1
+r1
+!s85 0
+!i10b 1
+!s100 ONN>C18Xem6d[2U4Ca0AO3
+I8QRhhNb9zKYCohSImYXeG1
+!i103 1
+S1
+R0
+R3
+R12
+R13
+Fharness/examples/sv_only/env/../env/ref_model.sv
+Fharness/examples/sv_only/env/../env/coverage.sv
+Fharness/examples/sv_only/env/../sequences/stim_lib.sv
+Fharness/examples/sv_only/env/../tests/sanity_test.sv
+Fharness/examples/sv_only/env/../tests/randomized_sanity_test.sv
+Fharness/examples/sv_only/env/../tests/loopback_test.sv
+Fharness/examples/sv_only/env/../tests/error_injection_test.sv
+Fharness/examples/sv_only/env/../tests/reg_access_test.sv
+Fharness/examples/sv_only/env/../tests/mode_coverage_test.sv
+Fharness/examples/sv_only/env/../tests/width_coverage_test.sv
+Fharness/examples/sv_only/env/../tests/delay_transfer_test.sv
+Fharness/examples/sv_only/env/../tests/clk_div_corner_test.sv
+Fharness/examples/sv_only/env/../tests/interrupt_test.sv
+Fharness/examples/sv_only/env/../tests/fifo_stress_test.sv
+Fharness/examples/sv_only/env/../tests/coverage_smoke_test.sv
+!i122 0
+L0 12 0
+R5
+31
+R6
+R11
+R7
+!i113 0
+R8
+R9
+R10
