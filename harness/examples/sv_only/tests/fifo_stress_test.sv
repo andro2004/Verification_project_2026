@@ -48,9 +48,17 @@ class fifo_stress_test;
             coverage.sample_fifo(ref_model.tx_fifo.size(), ref_model.rx_fifo.size());
         end
 
+<<<<<<< Updated upstream
         // Read STATUS and compare (Verifies TX_FULL)
         spi_sequence_lib::apb_read_sync(8'h04, status_val);
         ref_model.check_status(status_val);
+=======
+        // Mandatory contract check utilizing the explicit wrapper hierarchy path (Section 7)
+        if (tb_top.u_wrap.u_dut.u_regfile.tx_full_w !== 1'b1) begin
+            $display("[CHECKER_ERROR] TX_FULL failed to assert after 8 writes!");
+            error_count++;
+        end
+>>>>>>> Stashed changes
 
         // ---------------------------------------------------------------------
         // STEP 2: Trigger TX_OVF by pushing a 9th item
