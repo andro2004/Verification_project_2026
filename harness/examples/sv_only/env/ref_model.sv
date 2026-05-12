@@ -441,4 +441,5 @@ class spi_ref_model;
 
 endclass
 
+
 `endif // SPI_REF_MODEL_SV
