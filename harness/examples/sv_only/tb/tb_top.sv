@@ -189,11 +189,32 @@ module tb_top;
             "coverage_smoke_test" :
                 coverage_smoke_test::run(u_ref, u_cov);
 
+            "reg_access_test" :
+                reg_access_test::run(u_ref, u_cov);
+
+            "loopback_test" :
+                loopback_test::run(u_ref, u_cov);
+
             "width_coverage_test" :
                 width_coverage_test::run(u_ref, u_cov);
 
             "fifo_stress_test" :
                 fifo_stress_test::run(u_ref, u_cov);
+            
+            "error_injection_test"   :
+                error_injection_test::run(u_ref, u_cov);
+
+            "mode_coverage_test"     :
+                mode_coverage_test::run(u_ref, u_cov);
+
+            "delay_transfer_test"    :
+                delay_transfer_test::run(u_ref, u_cov);
+
+            "clk_div_corner_test"    :
+                clk_div_corner_test::run(u_ref, u_cov);
+
+            "interrupt_test"         :
+                interrupt_test::run(u_ref, u_cov);
 
             "ral_hw_reset_test" : begin
                 $display("[TEST_SKIPPED] ral_hw_reset_test");
