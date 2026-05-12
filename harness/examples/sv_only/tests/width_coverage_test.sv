@@ -211,7 +211,7 @@ class width_coverage_test;
         // CONSTRAINED RANDOM TRANSACTIONS
         // =====================================================================
         $display("[INFO] width_coverage_test: --- 20 Constrained Random Transfers ---");
-        for (int i = 0; i < 20; i++) begin
+        for (int i = 0; i < 1000; i++) begin
             spi_txn rand_txn = new();
             if (!rand_txn.randomize()) $fatal(1, "Failed to randomize txn");
             
