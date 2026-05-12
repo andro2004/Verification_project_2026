@@ -35,7 +35,7 @@ class interrupt_test;
             $fatal(1, "Failed to randomize txn");
 
         spi_sequence_lib::configure_dut(txn);
-        spi_sequence_lib::target_ss(txn.ss_en);
+        spi_sequence_lib::target_ss(4'b0000); // Do NOT assert SS_CTRL yet! Wait until we trigger TX_OVF.
 
         tb_top.bfm_mode      = txn.mode;
         tb_top.bfm_pattern   = bfm_pat;
@@ -67,6 +67,9 @@ class interrupt_test;
         // Clear TX_OVF (W1C)
         tb_top.u_apb_bfm.apb_write(8'h1C, 32'h0000_0004);
         ref_model.apb_write(8'h1C, 32'h0000_0004);
+
+        // NOW assert SS_CTRL to kick off the transfers
+        spi_sequence_lib::target_ss(txn.ss_en);
 
         // ---------------------------------------------------------------------
         // 3. Trigger XFER_DONE, TX_EMPTY, RX_FULL
