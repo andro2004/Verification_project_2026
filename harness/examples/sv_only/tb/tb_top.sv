@@ -80,13 +80,13 @@ module tb_top;
         .FULL    (u_wrap.u_dut.u_regfile.tx_full_w),
         .OVF     (u_wrap.u_dut.u_regfile.int_stat[2]),
         .push    (u_wrap.u_dut.u_regfile.tx_push_valid),
-        .tx_ptr  (u_wrap.u_dut.u_regfile.tx_wp - u_wrap.u_dut.u_regfile.tx_rp),
+        .tx_ptr  (u_wrap.u_dut.u_regfile.tx_wp - u_wrap.u_dut.u_regfile.tx_rp),     // rtl implementation of fifo is circular fifo, thus to know the count we need to subtract wr_ptr-rd_ptr
         .rx_ptr  (u_wrap.u_dut.u_regfile.rx_wp - u_wrap.u_dut.u_regfile.rx_rp),
-        .hw_event({u_wrap.u_dut.u_regfile.transfer_done_pulse, 
-                   u_wrap.u_dut.u_regfile.rx_push_valid && u_wrap.u_dut.u_regfile.rx_full_w,
-                   u_wrap.u_dut.u_regfile.tx_push_dropped,
-                   u_wrap.u_dut.u_regfile.rx_push_valid && !u_wrap.u_dut.u_regfile.rx_full_w && (u_wrap.u_dut.u_regfile.rx_count == 7),
-                   u_wrap.u_dut.u_regfile.tx_pop && (u_wrap.u_dut.u_regfile.tx_count == 1)}),
+        .hw_event({u_wrap.u_dut.u_regfile.transfer_done_pulse,      // transfer done bit 
+                   u_wrap.u_dut.u_regfile.rx_push_valid && u_wrap.u_dut.u_regfile.rx_full_w,    // rx_ovf
+                   u_wrap.u_dut.u_regfile.tx_push_dropped,      // tx_ovf 
+                   u_wrap.u_dut.u_regfile.rx_push_valid && !u_wrap.u_dut.u_regfile.rx_full_w && (u_wrap.u_dut.u_regfile.rx_count == 7),     // rx_full
+                   u_wrap.u_dut.u_regfile.tx_pop && (u_wrap.u_dut.u_regfile.tx_count == 1)}),       // tx_empty
         .sclk    (u_wrap.u_dut.u_core.SCLK),
         .mosi    (u_wrap.u_dut.u_core.MOSI),
         .cpol    (u_wrap.u_dut.u_core.cpol),
