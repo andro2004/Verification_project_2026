@@ -6,10 +6,17 @@
 # be consumed directly by the grader without modification.
 # =============================================================================
 
+# On Windows, use Git Bash so that mkdir -p, grep, seq, etc. all work.
+# Requires 'C:\Program Files\Git\bin' on PATH.
+ifeq ($(OS),Windows_NT)
+SHELL := bash
+endif
+
 SIMULATOR ?= questa
 SEED      ?= 0
 TEST      ?= sanity_test
 WAVES     ?= 0
+COVERAGE  ?= 1
 
 # Resolve the project root from this file's location.
 # harness/examples/sv_only/Makefile  -> ../../..
@@ -87,13 +94,26 @@ REGRESSION_TESTS = \
 
 REGRESSION_SEEDS ?= 20   # 10 * 20 = 200 runs (well under the 10000 cap)
 
+# ---- all tests (including non-graded / extra tests) -------------------------
+# Every test dispatched by tb_top.sv's case statement.
+ALL_TESTS = \
+  $(REGRESSION_TESTS) \
+  randomized_sanity_test \
+  coverage_smoke_test
+
 # ============================================================================
 # Questa flow (default)
 # ============================================================================
 ifeq ($(SIMULATOR),questa)
 
 VLOG_FLAGS  = -sv -timescale=1ns/1ps +acc=rn +define+SIM $(INC_DIRS)
+ifeq ($(COVERAGE),1)
 COV_FLAG    = -coverage +cover=bcestf
+COV_SAVE    = coverage save cov_$(TEST)_$(SEED).ucdb;
+else
+COV_FLAG    =
+COV_SAVE    =
+endif
 
 compile:
 	@mkdir -p build
@@ -110,7 +130,7 @@ compile:
 
 run: compile
 	vsim -c work.tb_top \
-	     -do "run -all; coverage save cov_$(TEST)_$(SEED).ucdb; quit -f" \
+	     -do "run -all; $(COV_SAVE) quit -f" \
 	     +TESTNAME=$(TEST) +UVM_TESTNAME=$(TEST) +SEED=$(SEED) \
 	     $(if $(filter 1,$(WAVES)), -wlf waves_$(TEST)_$(SEED).wlf,)
 
@@ -131,6 +151,29 @@ regress: compile
 	$(foreach t,$(REGRESSION_TESTS),$(call REGRESS_ONE,$(t)))
 	-vcover merge -out build/merged.ucdb $(wildcard cov_*.ucdb)
 
+# ---- run_all: run every test once (seed 0) ----------------------------------
+# Compiles once, then launches each test in ALL_TESTS sequentially.
+# Pass/fail status is printed per-test; logs go to build/log_<test>_0.log.
+run_all: compile
+	@mkdir -p build
+	@echo "======================================"
+	@echo "  Running ALL tests (seed=$(SEED))"
+	@echo "======================================"
+	@pass=0; fail=0; \
+	for t in $(ALL_TESTS); do \
+	    echo "--- $$t ---"; \
+	    $(MAKE) -s run TEST=$$t SEED=$(SEED) WAVES=$(WAVES) \
+	      > build/log_$${t}_$(SEED).log 2>&1 ; \
+	    if grep -q '\[TEST_PASSED\]' build/log_$${t}_$(SEED).log; then \
+	        echo "  PASSED"; pass=$$((pass+1)); \
+	    else \
+	        echo "  FAILED (see build/log_$${t}_$(SEED).log)"; fail=$$((fail+1)); \
+	    fi; \
+	done; \
+	echo "======================================"; \
+	echo "  Results: $$pass passed, $$fail failed"; \
+	echo "======================================"
+
 cov:
 	@if [ -f build/merged.ucdb ]; then \
 	    vcover report -details build/merged.ucdb > coverage_report.txt ; \
@@ -144,4 +187,4 @@ clean:
 
 endif
 
-.PHONY: compile run run_bonus regress cov clean
+.PHONY: compile run run_bonus regress run_all cov clean
