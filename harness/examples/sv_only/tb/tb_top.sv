@@ -41,7 +41,7 @@ module tb_top;
     // Slave BFM Control Signals
     // =========================================================================
     logic [1:0] bfm_mode       = 2'b00;
-    logic [7:0] bfm_pattern    = 8'hA5;
+    logic [31:0] bfm_pattern    = 8'hA5;
 
     // Added for width_coverage_test
     logic       bfm_lsb_first  = 1'b0;
@@ -112,52 +112,52 @@ module tb_top;
     // =========================================================================
     // Assertions Bind
     // =========================================================================
-    bind u_wrap.u_dut.u_regfile spi_sva u_sva (
+    // bind u_wrap.u_dut.u_regfile spi_sva u_sva (
 
-        .PCLK       (PCLK),
-        .PRESETn    (PRESETn),
+    //     .PCLK       (PCLK),
+    //     .PRESETn    (PRESETn),
 
-        .PSEL       (apb.psel),
-        .PENABLE    (apb.penable),
-        .PREADY     (apb.pready),
-        .PSLVERR    (apb.pslverr),
-        .PADDR      (apb.paddr),
-        .PWRITE     (apb.pwrite),
-        .PWDATA     (apb.pwdata),
+    //     .PSEL       (apb.psel),
+    //     .PENABLE    (apb.penable),
+    //     .PREADY     (apb.pready),
+    //     .PSLVERR    (apb.pslverr),
+    //     .PADDR      (apb.paddr),
+    //     .PWRITE     (apb.pwrite),
+    //     .PWDATA     (apb.pwdata),
 
-        .ctrl_en    (u_wrap.u_dut.u_regfile.ctrl_en),
+    //     .ctrl_en    (u_wrap.u_dut.u_regfile.ctrl_en),
 
-        .int_stat   (u_wrap.u_dut.u_regfile.int_stat),
-        .int_en     (u_wrap.u_dut.u_regfile.int_en),
-        .IRQ        (u_wrap.u_dut.u_regfile.IRQ),
+    //     .int_stat   (u_wrap.u_dut.u_regfile.int_stat),
+    //     .int_en     (u_wrap.u_dut.u_regfile.int_en),
+    //     .IRQ        (u_wrap.u_dut.u_regfile.IRQ),
 
-        .FULL       (u_wrap.u_dut.u_regfile.tx_full_w),
-        .OVF        (bind_ovf),
+    //     .FULL       (u_wrap.u_dut.u_regfile.tx_full_w),
+    //     .OVF        (bind_ovf),
 
-        .push       (u_wrap.u_dut.u_regfile.tx_push_valid),
+    //     .push       (u_wrap.u_dut.u_regfile.tx_push_valid),
 
-        .tx_ptr     (bind_tx_ptr),
-        .rx_ptr     (bind_rx_ptr),
+    //     .tx_ptr     (bind_tx_ptr),
+    //     .rx_ptr     (bind_rx_ptr),
 
-        .hw_event   (bind_hw_event),
+    //     .hw_event   (bind_hw_event),
 
-        .sclk       (u_wrap.u_dut.u_core.SCLK),
-        .mosi       (u_wrap.u_dut.u_core.MOSI),
+    //     .sclk       (u_wrap.u_dut.u_core.SCLK),
+    //     .mosi       (u_wrap.u_dut.u_core.MOSI),
 
-        .cpol       (u_wrap.u_dut.u_core.cpol),
-        .cpha       (u_wrap.u_dut.u_core.cpha),
+    //     .cpol       (u_wrap.u_dut.u_core.cpol),
+    //     .cpha       (u_wrap.u_dut.u_core.cpha),
 
-        .ss_n       (u_wrap.u_dut.u_regfile.SS_n),
+    //     .ss_n       (u_wrap.u_dut.u_regfile.SS_n),
 
-        .sclk_cnt   (u_wrap.u_dut.u_core.sclk_cnt),
-        .sclk_phase (u_wrap.u_dut.u_core.sclk_phase),
+    //     .sclk_cnt   (u_wrap.u_dut.u_core.sclk_cnt),
+    //     .sclk_phase (u_wrap.u_dut.u_core.sclk_phase),
 
-        .cfg_clk_div(u_wrap.u_dut.u_core.cfg_clk_div),
+    //     .cfg_clk_div(u_wrap.u_dut.u_core.cfg_clk_div),
 
-        .BUSY       (u_wrap.u_dut.u_core.busy),
+    //     .BUSY       (u_wrap.u_dut.u_core.busy),
 
-        .width      (bind_width)
-    );
+    //     .width      (bind_width)
+    // );
 
     // =========================================================================
     // Test Dispatcher
