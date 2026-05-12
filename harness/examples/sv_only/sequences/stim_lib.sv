@@ -193,63 +193,78 @@ class spi_sequence_lib;
     // configure_dut
     // -------------------------------------------------------------------------
     // Writes CLK_DIV, DELAY, INT_EN (all sources enabled), and CTRL in the
-    // correct order: configure clocks and delays BEFORE enabling the controller
-    // (writing CTRL last with EN=1) to avoid sampling a mid-change config.
+    // correct order. Mirrors writes to the reference model.
     // =========================================================================
-    static task configure_dut(spi_txn txn);
+    static task configure_dut(spi_txn txn, ref spi_ref_model ref_model);
         // 1. Clock divider — must be written before EN=1 (R8 / R25)
         tb_top.u_apb_bfm.apb_write(SL_CLK_DIV, {16'b0, txn.clk_div});
+        ref_model.apb_write(SL_CLK_DIV, {16'b0, txn.clk_div});
 
         // 2. Inter-transfer delay (R21)
         tb_top.u_apb_bfm.apb_write(SL_DELAY, {24'b0, txn.delay_cfg});
+        ref_model.apb_write(SL_DELAY, {24'b0, txn.delay_cfg});
 
         // 3. Enable all five interrupt sources so scoreboard can observe them
-        tb_top.u_apb_bfm.apb_write(SL_INT_EN, 32'h0000_001F);  // bits[4:0]
+        tb_top.u_apb_bfm.apb_write(SL_INT_EN, 32'h0000_001F);
+        ref_model.apb_write(SL_INT_EN, 32'h0000_001F);
 
-        // 4. CTRL last — EN=1 and MSTR=1 are embedded in pack_ctrl_word()
+        // 4. CTRL last
         tb_top.u_apb_bfm.apb_write(SL_CTRL, txn.pack_ctrl_word());
+        ref_model.apb_write(SL_CTRL, txn.pack_ctrl_word());
+    endtask
+
+    // Wrapper: allow callers to invoke configure_dut(txn) without passing
+    // a reference to the model. This keeps existing tests working and
+    // implicitly uses the tb_top.u_ref instance.
+    static task configure_dut(spi_txn txn);
+        configure_dut(txn, tb_top.u_ref);
     endtask
 
     // =========================================================================
     // target_ss
     // -------------------------------------------------------------------------
     // Asserts or de-asserts slave-select lanes.
-    //   ss_ctrl[3:0] = ss_en bits: 1 → assert that lane LOW (ss_val always 0)
-    //   Call with 4'b0000 to release all lanes.
     // =========================================================================
-    static task target_ss(bit [3:0] ss_en_bits);
-        // ss_val = 0 so any enabled lane goes LOW per R20 formula
+    static task target_ss(bit [3:0] ss_en_bits, ref spi_ref_model ref_model);
         tb_top.u_apb_bfm.apb_write(SL_SS_CTRL, {24'b0, 4'b0000, ss_en_bits});
+        ref_model.apb_write(SL_SS_CTRL, {24'b0, 4'b0000, ss_en_bits});
+    endtask
+
+    // Wrapper that uses the global ref model instance if caller omits it.
+    static task target_ss(bit [3:0] ss_en_bits);
+        target_ss(ss_en_bits, tb_top.u_ref);
     endtask
 
     // =========================================================================
     // push_single
     // -------------------------------------------------------------------------
-    // Writes one word to TX_DATA. The hardware masks the upper bits based on
-    // CTRL.WIDTH so we always write the full 32-bit tx_data field and let the
-    // DUT strip what it doesn't need.
+    // Writes one word to TX_DATA.
     // =========================================================================
-    static task push_single(spi_txn txn);
+    static task push_single(spi_txn txn, ref spi_ref_model ref_model);
         tb_top.u_apb_bfm.apb_write(SL_TX_DATA, txn.tx_data);
+        ref_model.apb_write(SL_TX_DATA, txn.tx_data);
+    endtask
+
+    // Wrapper to keep existing call sites working without passing ref_model
+    static task push_single(spi_txn txn);
+        push_single(txn, tb_top.u_ref);
     endtask
 
     // =========================================================================
     // push_burst
     // -------------------------------------------------------------------------
     // Pushes every transaction in txn_q[] to TX_DATA sequentially.
-    // The queue may have 1–8 entries (FIFO depth). The caller must ensure the
-    // FIFO is not already full before calling.
-    //
-    // Usage:
-    //   spi_txn q[$];
-    //   for (int i = 0; i < 8; i++) begin
-    //       spi_txn t = new(); void'(t.randomize()); q.push_back(t);
-    //   end
-    //   spi_sequence_lib::push_burst(q);
     // =========================================================================
-    static task push_burst(spi_txn txn_q[$]);
-        foreach (txn_q[i])
+    static task push_burst(spi_txn txn_q[$], ref spi_ref_model ref_model);
+        foreach (txn_q[i]) begin
             tb_top.u_apb_bfm.apb_write(SL_TX_DATA, txn_q[i].tx_data);
+            ref_model.apb_write(SL_TX_DATA, txn_q[i].tx_data);
+        end
+    endtask
+
+    // Wrapper variant
+    static task push_burst(spi_txn txn_q[$]);
+        push_burst(txn_q, tb_top.u_ref);
     endtask
 
     // =========================================================================
@@ -324,6 +339,15 @@ class spi_sequence_lib;
         tb_top.u_apb_bfm.apb_read (SL_INT_STAT, int_stat_before);
         // Write back the same value — 1s in PWDATA clear the corresponding bits
         tb_top.u_apb_bfm.apb_write(SL_INT_STAT, int_stat_before);
+        // Mirror the clear into the reference model so its W1C logic updates
+        tb_top.u_ref.apb_write(SL_INT_STAT, int_stat_before);
+    endtask
+
+    // Variant that allows an explicit ref_model (keeps API consistent)
+    static task clear_interrupts(output bit [31:0] int_stat_before, ref spi_ref_model ref_model);
+        tb_top.u_apb_bfm.apb_read (SL_INT_STAT, int_stat_before);
+        tb_top.u_apb_bfm.apb_write(SL_INT_STAT, int_stat_before);
+        ref_model.apb_write(SL_INT_STAT, int_stat_before);
     endtask
 
     // =========================================================================
@@ -402,6 +426,11 @@ class spi_sequence_lib;
         tb_top.u_apb_bfm.apb_write(SL_SS_CTRL, 32'h0000_0000);  // deassert all SS
         tb_top.u_apb_bfm.apb_write(SL_INT_EN,  32'h0000_0000);  // mask all IRQs
         tb_top.u_apb_bfm.apb_write(SL_INT_STAT,32'h0000_001F);  // W1C clear all
+        // Mirror reset actions into the reference model so it stays in sync
+        tb_top.u_ref.apb_write(SL_CTRL,    32'h0000_0000);
+        tb_top.u_ref.apb_write(SL_SS_CTRL, 32'h0000_0000);
+        tb_top.u_ref.apb_write(SL_INT_EN,  32'h0000_0000);
+        tb_top.u_ref.apb_write(SL_INT_STAT,32'h0000_001F);
     endtask
 
 endclass
