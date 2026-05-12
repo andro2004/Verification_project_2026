@@ -338,6 +338,7 @@ class spi_ref_model;
         end
     endtask
 
+
     // Check RX (MISO) data against prediction (from APB read)
     task check_rx(input bit [31:0] observed);
         if (pred_rx_fifo.size() == 0) begin
