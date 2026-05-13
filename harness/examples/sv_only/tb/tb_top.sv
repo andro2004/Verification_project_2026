@@ -238,6 +238,10 @@ module tb_top;
             $display("[TEST_FAILED] %s errors=%0d",
                      testname, u_ref.error_count);
 
+        $display("======================================");
+        $display("[COVERAGE] Functional Coverage = %0.2f%%", $get_coverage());
+        $display("======================================");
+
         $finish;
     end
 

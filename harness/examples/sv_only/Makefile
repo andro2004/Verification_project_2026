@@ -115,6 +115,7 @@ COV_FLAG    =
 COV_SAVE    =
 endif
 
+
 compile:
 	@mkdir -p build
 	vlib work
