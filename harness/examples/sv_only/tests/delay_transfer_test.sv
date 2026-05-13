@@ -89,48 +89,75 @@ class delay_transfer_test;
     endtask
 
     // -------------------------------------------------------------------------
-    // wait_for_sclk_idle
-    //   Spins until SCLK has been stable at `idle_level` for at least
-    //   `stable_pclk` consecutive PCLK cycles.
+    // count_word_and_measure_gap
+    //   Deterministic gap measurement using SCLK edge counting.
+    //
+    //   1. Wait for the first SCLK transition (transfer starts).
+    //   2. Count 2*bits_per_word transitions = word-1 complete.
+    //      (each bit has one rising + one falling edge)
+    //   3. Count PCLK ticks until the next SCLK transition = inter-word gap.
+    //
+    //   This replaces the old repeat-based approach which could miss the gap
+    //   or land mid-gap depending on pipeline latency and DIV value.
+    //
+    //   NOTE: Assumes CPHA=0 (Mode 0/2). For CPHA=1, the edge count per word
+    //   may differ by ±1 due to the setup half-cycle.
     // -------------------------------------------------------------------------
-    static task wait_for_sclk_idle(input logic idle_level,
-                                   input int   stable_pclk = 4);
-        int   stable = 0;
-        int   w      = 200000;
-        while (w-- > 0) begin
-            @(posedge tb_top.PCLK); #1;
-            if (tb_top.spi.sclk === idle_level)
-                stable++;
-            else
-                stable = 0;
-            if (stable >= stable_pclk) return;
-        end
-        $display("[CHECKER_ERROR] delay_transfer_test: timeout waiting for SCLK idle");
-    endtask
+    static task count_word_and_measure_gap(
+        input  int bits_per_word,
+        output int gap_pclk
+    );
+        logic prev, cur;
+        int   edge_count;
+        int   w;
 
-    // -------------------------------------------------------------------------
-    // measure_gap
-    //   Call after word-1 finishes (SCLK should be heading to idle_level).
-    //   First waits until SCLK is stably at idle_level, then counts PCLK
-    //   cycles until SCLK first leaves idle_level (= start of word-2).
-    // -------------------------------------------------------------------------
-    static task measure_gap(input logic idle_level, output int gap_pclk);
-        logic cur;
-        int   w = 500000;
+        gap_pclk   = 0;
+        edge_count = 0;
 
-        gap_pclk = 2; // FIX: Account for the 2 PCLKs burned by wait_for_sclk_idle
-
-        // Wait for SCLK to settle at idle (end of word-1)
-        wait_for_sclk_idle(idle_level, 2);
-
-        // Count PCLK cycles SCLK stays at idle (= the gap)
+        // Phase 1: Wait for first SCLK transition (DUT started shifting)
+        prev = tb_top.spi.sclk;
+        w    = 500000;
         while (w-- > 0) begin
             @(posedge tb_top.PCLK); #1;
             cur = tb_top.spi.sclk;
-            if (cur !== idle_level) return;   // SCLK just moved -> gap ended
+            if (cur !== prev) begin
+                edge_count = 1;
+                prev = cur;
+                break;
+            end
+            prev = cur;
+        end
+        if (w <= 0) begin
+            $display("[CHECKER_ERROR] count_word_and_measure_gap: no SCLK activity");
+            return;
+        end
+
+        // Phase 2: Count remaining edges to complete word-1
+        //   Total edges per word = 2 * bits_per_word (rise+fall per bit)
+        while (edge_count < 2 * bits_per_word && w-- > 0) begin
+            @(posedge tb_top.PCLK); #1;
+            cur = tb_top.spi.sclk;
+            if (cur !== prev) begin
+                edge_count++;
+                prev = cur;
+            end
+        end
+        if (w <= 0) begin
+            $display("[CHECKER_ERROR] count_word_and_measure_gap: word-1 edge count timeout");
+            return;
+        end
+
+        // Phase 3: SCLK is now at idle level after word-1's last edge.
+        //   Count PCLK ticks until the next SCLK transition (= start of word-2).
+        prev = cur;
+        w    = 500000;
+        while (w-- > 0) begin
+            @(posedge tb_top.PCLK); #1;
+            cur = tb_top.spi.sclk;
+            if (cur !== prev) return;   // gap ended — first edge of word-2
             gap_pclk++;
         end
-        $display("[CHECKER_ERROR] delay_transfer_test: measure_gap timeout");
+        $display("[CHECKER_ERROR] count_word_and_measure_gap: gap measurement timeout");
     endtask
 
     // -------------------------------------------------------------------------
@@ -278,16 +305,34 @@ class delay_transfer_test;
         tb_top.u_ref.apb_write     (SL_SS_CTRL, 32'h0000_0001);
 
         // Debug: read DUT STATUS and SS_CTRL immediately after asserting SS
-        tb_top.u_apb_bfm.apb_read(SL_STATUS, dut_status);
-        tb_top.u_apb_bfm.apb_read(SL_SS_CTRL, dut_ss);
-        $display("[DBG] after SS assert: DUT_STATUS=0x%08h SS_CTRL=0x%08h tb_bfm_mode=%0b tb_bfm_width=%0b tb_bfm_lsb_first=%0b",
-                 dut_status, dut_ss, tb_top.bfm_mode, tb_top.bfm_width, tb_top.bfm_lsb_first);
+        // IMPORTANT: Reading from APB BFM consumes PCLK cycles! Doing this here 
+        // delays the start of edge-counting in step 6 and breaks gap measurement.
+        // tb_top.u_apb_bfm.apb_read(SL_STATUS, dut_status);
+        // tb_top.u_apb_bfm.apb_read(SL_SS_CTRL, dut_ss);
+        // $display("[DBG] after SS assert: DUT_STATUS=0x%08h SS_CTRL=0x%08h tb_bfm_mode=%0b tb_bfm_width=%0b tb_bfm_lsb_first=%0b",
+        //          dut_status, dut_ss, tb_top.bfm_mode, tb_top.bfm_width, tb_top.bfm_lsb_first);
 
         // ---- 6. Measurement ------------------------------------------------
         if (delay_val == 0) begin
             $display("[INFO] delay_transfer_test [%s]: delay=0, no gap to measure", label);
         end else begin
-            // 6a. Measure SCLK period during word-1 (validates R25 too)
+            // 6a. Measure inter-word gap using deterministic edge counting.
+            //     Counts 2*bits_per_word SCLK edges (= word 1), then measures
+            //     PCLK ticks until the next SCLK transition (= the gap).
+            count_word_and_measure_gap(bits_per_word, gap_pclk);
+
+            // Round to nearest half-cycle to absorb ±1 PCLK edge jitter.
+            // Subtract 1 because the measurement from the last edge of word-1 
+            // to the first edge of word-2 naturally includes 1 inherent half-cycle.
+            // The DELAY register specifies *additional* inserted half-cycles.
+            measured_half_cycles = ((gap_pclk + half_period_pclk / 2) / half_period_pclk) - 1;
+
+            $display("[INFO] delay_transfer_test [%s]: gap=%0d PCLK / hp=%0d => %0d half-cycles inserted (expected %0d)",
+                     label, gap_pclk, half_period_pclk, measured_half_cycles, int'(delay_val));
+
+            ref_model.check_delay(measured_half_cycles);
+
+            // 6b. Measure SCLK period during word-2 (validates CLK_DIV)
             measure_sclk_period(sclk_period_pclk);
 
             if (sclk_period_pclk == 0) begin
@@ -298,23 +343,6 @@ class delay_transfer_test;
                          label, sclk_period_pclk, 2*half_period_pclk);
                 ref_model.check_sclk_period(sclk_period_pclk);
             end
-
-            // 6b. Wait past word-1 entirely, with margin
-            //     word-1 duration = bits_per_word * 2 * half_period_pclk PCLK
-            repeat (bits_per_word * 2 * half_period_pclk + 4 * half_period_pclk)
-                @(posedge tb_top.PCLK);
-
-            // 6c. Measure the idle gap between word-1 and word-2
-            measure_gap(cpol, gap_pclk);
-
-            // Round to nearest half-cycle to absorb ±1 PCLK edge jitter
-            measured_half_cycles = (gap_pclk + half_period_pclk / 2) / half_period_pclk;
-
-            $display("[INFO] delay_transfer_test [%s]: gap=%0d PCLK / hp=%0d => %0d half-cycles (expected %0d)",
-                     label, gap_pclk, half_period_pclk, measured_half_cycles, int'(delay_val));
-
-            // TODO: delay measurement is timing-dependent; skip check for now
-            // ref_model.check_delay(measured_half_cycles);
         end
 
         // ---- 7. Wait for both transfers to complete ------------------------
@@ -348,26 +376,26 @@ class delay_transfer_test;
         // Word 1
         tb_top.u_apb_bfm.apb_read(SL_RX_DATA, rx_word);
         void'(tb_top.u_ref.apb_read(SL_RX_DATA));
-        // Only check RX for tests without delay (delay corrupts data in some cases)
-        if (delay_val == 0) begin
-            ref_model.check_rx(rx_word);
-        end else begin
-            $display("[DBG] word1: predicted=0x%08h observed=0x%08h (skipped check for delayed transfer)",
+        // Check RX data. Skip only for DIV=0 where the BFM may not keep up
+        // with SCLK = PCLK/2 speed (BFM timing limitation, not a DUT bug).
+        if (div_val == 0) begin
+            $display("[DBG] word1: predicted=0x%08h observed=0x%08h (skipped: DIV=0 BFM timing)",
                      ref_model.pred_rx_fifo.size() > 0 ? ref_model.pred_rx_fifo[0] : 32'hXXXXXXXX, rx_word);
             if (ref_model.pred_rx_fifo.size() > 0) void'(ref_model.pred_rx_fifo.pop_front());
+        end else begin
+            ref_model.check_rx(rx_word);
         end
         coverage.sample_register(SL_RX_DATA, 1'b0);
 
         // Word 2
         tb_top.u_apb_bfm.apb_read(SL_RX_DATA, rx_word);
         void'(tb_top.u_ref.apb_read(SL_RX_DATA));
-        // Only check RX for tests without delay
-        if (delay_val == 0) begin
-            ref_model.check_rx(rx_word);
-        end else begin
-            $display("[DBG] word2: predicted=0x%08h observed=0x%08h (skipped check for delayed transfer)",
+        if (div_val == 0) begin
+            $display("[DBG] word2: predicted=0x%08h observed=0x%08h (skipped: DIV=0 BFM timing)",
                      ref_model.pred_rx_fifo.size() > 0 ? ref_model.pred_rx_fifo[0] : 32'hXXXXXXXX, rx_word);
             if (ref_model.pred_rx_fifo.size() > 0) void'(ref_model.pred_rx_fifo.pop_front());
+        end else begin
+            ref_model.check_rx(rx_word);
         end
         coverage.sample_fifo(0, 0);
 
@@ -477,6 +505,7 @@ class delay_transfer_test;
     // run - top-level entry point called by tb_top
     // =========================================================================
     static task run(ref spi_ref_model ref_model, ref spi_coverage_col coverage);
+        int total_errors = 0;
         $display("[INFO] delay_transfer_test: starting");
 
         // Sub-test A: DELAY=0, DIV=3, 8-bit, mode-0
@@ -484,12 +513,14 @@ class delay_transfer_test;
         ref_model.reset();
         run_delay_subtest(8'd0,   16'd3, 2'b00, 1'b0, 2'b00,
                           "A-delay0-8b",    ref_model, coverage);
+        total_errors += ref_model.error_count;
 
         // Sub-test B: DELAY=1, DIV=2, 8-bit, mode-0
         spi_sequence_lib::reset_dut();
         ref_model.reset();
         run_delay_subtest(8'd1,   16'd2, 2'b00, 1'b0, 2'b00,
                           "B-delay1-8b",    ref_model, coverage);
+        total_errors += ref_model.error_count;
 
         // Sub-test C: DELAY=8, DIV=1, 8-bit, mode-0
         // delay_cfg=8 violates spi_txn.c_delay_sane [0:7], so we bypass
@@ -498,6 +529,7 @@ class delay_transfer_test;
         ref_model.reset();
         run_delay_subtest(8'd8,   16'd1, 2'b00, 1'b0, 2'b00,
                           "C-delay8-8b",    ref_model, coverage);
+        total_errors += ref_model.error_count;
 
         // Sub-test D: DELAY=128, DIV=0, 8-bit, mode-0
         // Hits coverage bin delay_large (>=128) and DIV=0 corner simultaneously
@@ -505,12 +537,15 @@ class delay_transfer_test;
         ref_model.reset();
         run_delay_subtest(8'd128, 16'd0, 2'b00, 1'b0, 2'b00,
                           "D-delay128-8b",  ref_model, coverage);
+        total_errors += ref_model.error_count;
 
         // Sub-test E: R24 + R25 dedicated sub-test
         spi_sequence_lib::reset_dut();
         ref_model.reset();
         run_r24_r25_subtest(ref_model, coverage);
+        total_errors += ref_model.error_count;
 
+        ref_model.error_count = total_errors;
         $display("[INFO] delay_transfer_test: finished, errors=%0d",
                  ref_model.error_count);
     endtask
