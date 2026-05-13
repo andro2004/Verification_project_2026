@@ -36,7 +36,7 @@ module spi_regfile_sva (
     a_irq_agg : assert property (
         @(posedge PCLK) disable iff (!PRESETn)
             IRQ == |(INT_STAT & INT_EN)
-    ) else $error("ERROR: a_irq_agg IRQ=%b, calculated=%b (INT_STAT=%b, INT_EN=%b)",
+    ) else $error("[ASSERTION_ERROR] a_irq_agg IRQ=%b, calculated=%b (INT_STAT=%b, INT_EN=%b)",
                   IRQ, |(INT_STAT & INT_EN), INT_STAT, INT_EN);
 
     // a_irq_off_when_disabled — REMOVED.
@@ -55,7 +55,7 @@ module spi_regfile_sva (
         $rose(PSEL) |-> PSEL ##1 PSEL;
     endproperty
     a_apb_psel_2clk: assert property(apb_psel_two_cycles)
-        else $error("ERROR: PSEL dropped too early!");
+        else $error("[ASSERTION_ERROR] a_apb_psel_2clk PSEL dropped too early!");
     
     // a_apb_penable: PENABLE must only assert while PSEL=1.
     property apb_penable_requires_psel;
@@ -63,7 +63,7 @@ module spi_regfile_sva (
         PENABLE |-> PSEL;
     endproperty
     a_apb_penable: assert property(apb_penable_requires_psel)
-        else $error("ERROR: PENABLE high while PSEL is low!");
+        else $error("[ASSERTION_ERROR] a_apb_penable PENABLE high while PSEL is low!");
 
     // a_apb_stable_bus: PADDR, PWRITE, PWDATA stable from SETUP to ACCESS of the same transaction.
     property apb_signals_stable;
@@ -72,7 +72,7 @@ module spi_regfile_sva (
         |=> $stable(PADDR) && $stable(PWRITE) && $stable(PWDATA);   // next clk cycle must be in active phase
     endproperty
     a_apb_stable_bus: assert property(apb_signals_stable)
-        else $error("ERROR: APB control/data bus signals unstable during transfer phase!");
+        else $error("[ASSERTION_ERROR] a_apb_stable_bus APB signals unstable during transfer phase!");
 
     // a_fifo_no_push_full (Req R13): A push while TX FIFO is full must set OVF.
     //
@@ -87,15 +87,15 @@ module spi_regfile_sva (
         (FULL && push) |=> OVF;
     endproperty
     a_fifo_no_push_full: assert property(fifo_no_push_when_full)
-        else $error("ERROR: Push while FIFO full did not set OVF!");
+        else $error("[ASSERTION_ERROR] a_fifo_no_push_full Push while FIFO full did not set OVF!");
     
     // a_apb_zero_ws (Req R22): Check that PREADY always equals 1 (zero wait states).
     a_apb_zero_ws : assert property (@(posedge PCLK) PSEL |-> PREADY)
-        else $error("ERROR: Zero-wait state violation: PREADY is low during access");
+        else $error("[ASSERTION_ERROR] a_apb_zero_ws PREADY low during access (zero-wait-state violation)");
 
     // a_fifo_bounds (Req R11, R12): Ensure TX and RX FIFO pointers never exceed depth of 8.
     a_fifo_bounds : assert property (@(posedge PCLK) (tx_ptr <= 4'd8) && (rx_ptr <= 4'd8))
-        else $error("ERROR: FIFO pointer overflow! TX=%d, RX=%d", tx_ptr, rx_ptr);
+        else $error("[ASSERTION_ERROR] a_fifo_bounds FIFO pointer overflow! TX=%0d, RX=%0d", tx_ptr, rx_ptr);
 
     // a_w1c_race (Req R18): Verify that a W1C write plus a simultaneous hardware event keeps the bit set.
     property p_w1c_race;
@@ -105,7 +105,7 @@ module spi_regfile_sva (
         ((INT_STAT & $past(hw_event)) == $past(hw_event));
     endproperty
     a_w1c_race: assert property(p_w1c_race)
-        else $error("ERROR: W1C race lost: incoming hardware event was cleared by active write!");
+        else $error("[ASSERTION_ERROR] a_w1c_race W1C race lost: hardware event cleared by active write!");
 endmodule
 
 `endif // SPI_REGFILE_SVA_SV
