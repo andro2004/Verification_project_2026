@@ -78,86 +78,64 @@ module tb_top;
 
     // =========================================================================
     // SVA Bind Support Wires
-    // =========================================================================
-    wire [3:0] bind_tx_ptr =
-        u_wrap.u_dut.u_regfile.tx_wp -
-        u_wrap.u_dut.u_regfile.tx_rp;
+    // -------------------------------------------------------------------------
+    
+    bind u_wrap.u_dut.u_regfile spi_sva u_sva (
 
-    wire [3:0] bind_rx_ptr =
-        u_wrap.u_dut.u_regfile.rx_wp -
-        u_wrap.u_dut.u_regfile.rx_rp;
+        .PCLK       (PCLK),
+        .PRESETn    (PRESETn),
 
-    wire [4:0] bind_hw_event = {
-        u_wrap.u_dut.u_regfile.transfer_done_pulse,
-        (u_wrap.u_dut.u_regfile.rx_push_valid &&
-         u_wrap.u_dut.u_regfile.rx_full_w),
+        .PSEL       (apb.psel),
+        .PENABLE    (apb.penable),
+        .PREADY     (apb.pready),
+        .PSLVERR    (apb.pslverr),
+        .PADDR      (apb.paddr),
+        .PWRITE     (apb.pwrite),
+        .PWDATA     (apb.pwdata),
 
-        u_wrap.u_dut.u_regfile.tx_push_dropped,
+        .ctrl_en    (u_wrap.u_dut.u_regfile.ctrl_en),
 
-        (u_wrap.u_dut.u_regfile.rx_push_valid &&
-         !u_wrap.u_dut.u_regfile.rx_full_w &&
-         (u_wrap.u_dut.u_regfile.rx_count == 7)),
+        .int_stat   (u_wrap.u_dut.u_regfile.int_stat),
+        .int_en     (u_wrap.u_dut.u_regfile.int_en),
+        .IRQ        (u_wrap.u_dut.u_regfile.IRQ),
 
-        (u_wrap.u_dut.u_regfile.tx_pop &&
-         (u_wrap.u_dut.u_regfile.tx_count == 1))
-    };
+        .FULL       (u_wrap.u_dut.u_regfile.tx_full_w),
+        .OVF        (u_wrap.u_dut.u_regfile.int_stat[2]),
 
-    wire [5:0] bind_width =
-        (u_wrap.u_dut.u_core.xfer_width == 2'b00) ? 6'd8  :
-        (u_wrap.u_dut.u_core.xfer_width == 2'b01) ? 6'd16 :
-                                                     6'd32;
+        .push       (u_wrap.u_dut.u_regfile.tx_push_valid),
 
-    wire bind_ovf = u_wrap.u_dut.u_regfile.int_stat[2];
+        .tx_ptr     (u_wrap.u_dut.u_regfile.tx_wp - u_wrap.u_dut.u_regfile.tx_rp),
+        .rx_ptr     (u_wrap.u_dut.u_regfile.rx_wp - u_wrap.u_dut.u_regfile.rx_rp),
 
-    // =========================================================================
-    // Assertions Bind
-    // =========================================================================
-    // bind u_wrap.u_dut.u_regfile spi_sva u_sva (
+        .hw_event   ({
+            u_wrap.u_dut.u_regfile.transfer_done_pulse,
+            (u_wrap.u_dut.u_regfile.rx_push_valid & u_wrap.u_dut.u_regfile.rx_full_w),
+            u_wrap.u_dut.u_regfile.tx_push_dropped,
+            (u_wrap.u_dut.u_regfile.rx_push_valid & ~u_wrap.u_dut.u_regfile.rx_full_w &
+             (u_wrap.u_dut.u_regfile.rx_count == 7)),
+            (u_wrap.u_dut.u_regfile.tx_pop & (u_wrap.u_dut.u_regfile.tx_count == 1))
+        }),
 
-    //     .PCLK       (PCLK),
-    //     .PRESETn    (PRESETn),
+        .sclk       (u_wrap.u_dut.u_core.SCLK),
+        .mosi       (u_wrap.u_dut.u_core.MOSI),
 
-    //     .PSEL       (apb.psel),
-    //     .PENABLE    (apb.penable),
-    //     .PREADY     (apb.pready),
-    //     .PSLVERR    (apb.pslverr),
-    //     .PADDR      (apb.paddr),
-    //     .PWRITE     (apb.pwrite),
-    //     .PWDATA     (apb.pwdata),
+        .cpol       (u_wrap.u_dut.u_core.cpol),
+        .cpha       (u_wrap.u_dut.u_core.cpha),
 
-    //     .ctrl_en    (u_wrap.u_dut.u_regfile.ctrl_en),
+        .ss_n       (u_wrap.u_dut.u_regfile.SS_n),
 
-    //     .int_stat   (u_wrap.u_dut.u_regfile.int_stat),
-    //     .int_en     (u_wrap.u_dut.u_regfile.int_en),
-    //     .IRQ        (u_wrap.u_dut.u_regfile.IRQ),
+        .sclk_cnt   (u_wrap.u_dut.u_core.sclk_cnt),
+        .sclk_phase (u_wrap.u_dut.u_core.sclk_phase),
 
-    //     .FULL       (u_wrap.u_dut.u_regfile.tx_full_w),
-    //     .OVF        (bind_ovf),
+        .cfg_clk_div(u_wrap.u_dut.u_core.cfg_clk_div),
 
-    //     .push       (u_wrap.u_dut.u_regfile.tx_push_valid),
+        .BUSY       (u_wrap.u_dut.u_core.busy),
 
-    //     .tx_ptr     (bind_tx_ptr),
-    //     .rx_ptr     (bind_rx_ptr),
-
-    //     .hw_event   (bind_hw_event),
-
-    //     .sclk       (u_wrap.u_dut.u_core.SCLK),
-    //     .mosi       (u_wrap.u_dut.u_core.MOSI),
-
-    //     .cpol       (u_wrap.u_dut.u_core.cpol),
-    //     .cpha       (u_wrap.u_dut.u_core.cpha),
-
-    //     .ss_n       (u_wrap.u_dut.u_regfile.SS_n),
-
-    //     .sclk_cnt   (u_wrap.u_dut.u_core.sclk_cnt),
-    //     .sclk_phase (u_wrap.u_dut.u_core.sclk_phase),
-
-    //     .cfg_clk_div(u_wrap.u_dut.u_core.cfg_clk_div),
-
-    //     .BUSY       (u_wrap.u_dut.u_core.busy),
-
-    //     .width      (bind_width)
-    // );
+        .width      (
+            (u_wrap.u_dut.u_core.xfer_width == 2'b00) ? 6'd8  :
+            (u_wrap.u_dut.u_core.xfer_width == 2'b01) ? 6'd16 : 6'd32
+        )
+    );
 
     // =========================================================================
     // Test Dispatcher
