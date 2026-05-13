@@ -42,7 +42,6 @@ class spi_ref_model;
 
     // R2: All registers return their specified reset values after PRESETn.
     function void reset();
-        error_count  = 0;
         ctrl         = 32'h0000_0000;
         clk_div      = 32'h0000_0000;
         ss_ctrl      = 32'h0000_0000;

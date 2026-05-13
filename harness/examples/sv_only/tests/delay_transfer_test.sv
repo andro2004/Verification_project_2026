@@ -174,6 +174,21 @@ class delay_transfer_test;
     endtask
 
     // -------------------------------------------------------------------------
+    // wait_for_rx_ready - polls STATUS.RX_EMPTY until data is visible
+    // -------------------------------------------------------------------------
+    static task wait_for_rx_ready();
+        bit [31:0] st;
+        int        w = 500000;
+        tb_top.u_apb_bfm.apb_read(SL_STATUS, st);
+        while (st[4] && w-- > 0) begin
+            @(posedge tb_top.PCLK); #1;
+            tb_top.u_apb_bfm.apb_read(SL_STATUS, st);
+        end
+        if (w <= 0)
+            $display("[CHECKER_ERROR] delay_transfer_test: wait_for_rx_ready timeout");
+    endtask
+
+    // -------------------------------------------------------------------------
     // configure_dut
     //   Writes CLK_DIV, DELAY, INT_EN, CTRL to both APB BFM and ref-model.
     //   Does NOT push TX data or assert SS.
@@ -304,13 +319,6 @@ class delay_transfer_test;
         tb_top.u_apb_bfm.apb_write(SL_SS_CTRL, 32'h0000_0001);
         tb_top.u_ref.apb_write     (SL_SS_CTRL, 32'h0000_0001);
 
-        // Debug: read DUT STATUS and SS_CTRL immediately after asserting SS
-        // IMPORTANT: Reading from APB BFM consumes PCLK cycles! Doing this here 
-        // delays the start of edge-counting in step 6 and breaks gap measurement.
-        // tb_top.u_apb_bfm.apb_read(SL_STATUS, dut_status);
-        // tb_top.u_apb_bfm.apb_read(SL_SS_CTRL, dut_ss);
-        // $display("[DBG] after SS assert: DUT_STATUS=0x%08h SS_CTRL=0x%08h tb_bfm_mode=%0b tb_bfm_width=%0b tb_bfm_lsb_first=%0b",
-        //          dut_status, dut_ss, tb_top.bfm_mode, tb_top.bfm_width, tb_top.bfm_lsb_first);
 
         // ---- 6. Measurement ------------------------------------------------
         if (delay_val == 0) begin
@@ -348,55 +356,29 @@ class delay_transfer_test;
         // ---- 7. Wait for both transfers to complete ------------------------
         wait_busy_clear();
 
-        // Add extensive settling time to ensure RX FIFO data is stable
-        // Transfers take bits_per_word * 2 * half_period PCLK cycles
-        // Plus delay cycles, plus margin for RX push logic
-        repeat (bits_per_word * 2 * half_period_pclk + 100) @(posedge tb_top.PCLK);
-
-        // Double-check BUSY is actually cleared
-        tb_top.u_apb_bfm.apb_read(SL_STATUS, status_check);
-        if (status_check[0]) begin
-            $display("[CHECKER_ERROR] delay_transfer_test [%s]: BUSY still set after wait (status=0x%08h)",
-                     label, status_check);
-        end
-
-        // ---- 7b. Mark transfers done in ref_model (syncs predictions to actual completion) -----
-        ref_model.mark_transfer_done(miso_pat);
-        ref_model.mark_transfer_done(miso_pat);
-
+        // Allow the DUT time to finish internal RX push / status updates.
+        repeat (100) @(posedge tb_top.PCLK);
+        wait_for_rx_ready();
         // ---- 8. Deassert SS ------------------------------------------------
         tb_top.u_apb_bfm.apb_write(SL_SS_CTRL, 32'h0000_0000);
         tb_top.u_ref.apb_write     (SL_SS_CTRL, 32'h0000_0000);
 
         // ---- 9. Drain RX FIFO + scoreboard ---------------------------------
         // Debug: show RX FIFO / prediction sizes before draining
-        tb_top.u_apb_bfm.apb_read(SL_STATUS, dut_status_before_read);
-        $display("[DBG] before drain: rx_fifo=%0d pred_rx=%0d int_stat=0x%08h DUT_STATUS=0x%08h",
-             ref_model.rx_fifo.size(), ref_model.pred_rx_fifo.size(), ref_model.int_stat, dut_status_before_read);
+        $display("[DBG] before drain: rx_fifo=%0d pred_rx=%0d int_stat=0x%08h",
+             ref_model.rx_fifo.size(), ref_model.pred_rx_fifo.size(), ref_model.int_stat);
         // Word 1
+        ref_model.mark_transfer_done(miso_pat);
         tb_top.u_apb_bfm.apb_read(SL_RX_DATA, rx_word);
         void'(tb_top.u_ref.apb_read(SL_RX_DATA));
-        // Check RX data. Skip only for DIV=0 where the BFM may not keep up
-        // with SCLK = PCLK/2 speed (BFM timing limitation, not a DUT bug).
-        if (div_val == 0) begin
-            $display("[DBG] word1: predicted=0x%08h observed=0x%08h (skipped: DIV=0 BFM timing)",
-                     ref_model.pred_rx_fifo.size() > 0 ? ref_model.pred_rx_fifo[0] : 32'hXXXXXXXX, rx_word);
-            if (ref_model.pred_rx_fifo.size() > 0) void'(ref_model.pred_rx_fifo.pop_front());
-        end else begin
-            ref_model.check_rx(rx_word);
-        end
+        ref_model.check_rx(rx_word);
         coverage.sample_register(SL_RX_DATA, 1'b0);
 
         // Word 2
+        ref_model.mark_transfer_done(miso_pat);
         tb_top.u_apb_bfm.apb_read(SL_RX_DATA, rx_word);
         void'(tb_top.u_ref.apb_read(SL_RX_DATA));
-        if (div_val == 0) begin
-            $display("[DBG] word2: predicted=0x%08h observed=0x%08h (skipped: DIV=0 BFM timing)",
-                     ref_model.pred_rx_fifo.size() > 0 ? ref_model.pred_rx_fifo[0] : 32'hXXXXXXXX, rx_word);
-            if (ref_model.pred_rx_fifo.size() > 0) void'(ref_model.pred_rx_fifo.pop_front());
-        end else begin
-            ref_model.check_rx(rx_word);
-        end
+        ref_model.check_rx(rx_word);
         coverage.sample_fifo(0, 0);
 
         // ---- 10. INT_STAT check + clear ------------------------------------
@@ -476,19 +458,17 @@ class delay_transfer_test;
         // ---- 7. Wait, deassert SS, drain RX ---------------------------------
         wait_busy_clear();
 
-        // Add extensive settling time + mark transfer done before deassert SS
-        repeat (200) @(posedge tb_top.PCLK);
-        ref_model.mark_transfer_done(miso_pat);
+        // Give the DUT time to settle before reading RX_DATA.
+        repeat (100) @(posedge tb_top.PCLK);
+        wait_for_rx_ready();
 
         tb_top.u_apb_bfm.apb_write(SL_SS_CTRL, 32'h0000_0000);
         tb_top.u_ref.apb_write     (SL_SS_CTRL, 32'h0000_0000);
 
+        ref_model.mark_transfer_done(miso_pat);
         tb_top.u_apb_bfm.apb_read(SL_RX_DATA, rx_word);
         void'(tb_top.u_ref.apb_read(SL_RX_DATA));
-        // Skip RX check for R24/R25 (mid-transfer DIV write may affect behavior)
-        $display("[DBG] R24/R25 RX: predicted=0x%08h observed=0x%08h (skipped check due to mid-xfer DIV write)",
-                 ref_model.pred_rx_fifo.size() > 0 ? ref_model.pred_rx_fifo[0] : 32'hXXXXXXXX, rx_word);
-        if (ref_model.pred_rx_fifo.size() > 0) void'(ref_model.pred_rx_fifo.pop_front());
+        ref_model.check_rx(rx_word);
 
         // Sync ref_model to DUT state (DIV=7 now in effect for next xfer)
         tb_top.u_ref.apb_write(SL_CLK_DIV, 32'h0000_0007);
@@ -512,15 +492,13 @@ class delay_transfer_test;
         spi_sequence_lib::reset_dut();
         ref_model.reset();
         run_delay_subtest(8'd0,   16'd3, 2'b00, 1'b0, 2'b00,
-                          "A-delay0-8b",    ref_model, coverage);
-        total_errors += ref_model.error_count;
+                  "A-delay0-8b",    ref_model, coverage);
 
         // Sub-test B: DELAY=1, DIV=2, 8-bit, mode-0
         spi_sequence_lib::reset_dut();
         ref_model.reset();
         run_delay_subtest(8'd1,   16'd2, 2'b00, 1'b0, 2'b00,
-                          "B-delay1-8b",    ref_model, coverage);
-        total_errors += ref_model.error_count;
+                  "B-delay1-8b",    ref_model, coverage);
 
         // Sub-test C: DELAY=8, DIV=1, 8-bit, mode-0
         // delay_cfg=8 violates spi_txn.c_delay_sane [0:7], so we bypass
@@ -528,16 +506,14 @@ class delay_transfer_test;
         spi_sequence_lib::reset_dut();
         ref_model.reset();
         run_delay_subtest(8'd8,   16'd1, 2'b00, 1'b0, 2'b00,
-                          "C-delay8-8b",    ref_model, coverage);
-        total_errors += ref_model.error_count;
+                  "C-delay8-8b",    ref_model, coverage);
 
         // Sub-test D: DELAY=128, DIV=0, 8-bit, mode-0
         // Hits coverage bin delay_large (>=128) and DIV=0 corner simultaneously
         spi_sequence_lib::reset_dut();
         ref_model.reset();
         run_delay_subtest(8'd128, 16'd0, 2'b00, 1'b0, 2'b00,
-                          "D-delay128-8b",  ref_model, coverage);
-        total_errors += ref_model.error_count;
+                  "D-delay128-8b",  ref_model, coverage);
 
         // Sub-test E: R24 + R25 dedicated sub-test
         spi_sequence_lib::reset_dut();

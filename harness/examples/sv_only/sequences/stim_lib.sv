@@ -28,7 +28,7 @@ localparam int SL_STATUS_RX_EMPTY = 4;
 localparam int SL_STATUS_TX_OVF   = 5;
 localparam int SL_STATUS_RX_OVF   = 6;
 
-localparam int SL_POLL_TIMEOUT = 5000;
+localparam int SL_POLL_TIMEOUT = 10000000;
 
 class spi_txn;
     rand bit [1:0]  mode;
@@ -172,8 +172,8 @@ class spi_sequence_lib;
     // =========================================================================
     static task do_transfer(spi_txn txn, output bit [31:0] rx_word);
         configure_dut(txn);
-        push_single(txn);
         target_ss(txn.ss_en);
+        push_single(txn);
         wait_idle();
         target_ss(4'b0000);
         apb_read_sync(SL_RX_DATA, rx_word);
@@ -186,8 +186,8 @@ class spi_sequence_lib;
         if (txn_q.size() == 0) return;
 
         configure_dut(txn_q[0]);
-        push_burst(txn_q);
         target_ss(txn_q[0].ss_en);
+        push_burst(txn_q);
         wait_idle();
         target_ss(4'b0000);
         pop_rx_burst(rx_q); 

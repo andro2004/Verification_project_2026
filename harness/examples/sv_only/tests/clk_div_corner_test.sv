@@ -28,6 +28,7 @@ class clk_div_corner_test;
         spi_sequence_lib::reset_dut();
         ref_model.reset();
 
+
         // Build transaction
         txn = new();
         txn.mode       = 2'b00;
@@ -63,8 +64,8 @@ class clk_div_corner_test;
         fork
             begin
                 // Thread 1: drive stimulus
-                spi_sequence_lib::push_single(txn);
-                spi_sequence_lib::target_ss(txn.ss_en);
+                spi_sequence_lib::target_ss(txn.ss_en); // Assert SS FIRST
+                spi_sequence_lib::push_single(txn);     // Then start transfer
                 spi_sequence_lib::wait_idle();
                 spi_sequence_lib::target_ss(4'b0000);
             end
@@ -122,8 +123,8 @@ class clk_div_corner_test;
         ref_model.predict_transfer(txn.tx_data, tb_top.bfm_pattern, txn.loopback, txn.width, txn.lsb_first);
         ref_model.mark_transfer_start();
 
-        spi_sequence_lib::push_single(txn);
-        spi_sequence_lib::target_ss(txn.ss_en);
+        spi_sequence_lib::target_ss(txn.ss_en); // Assert SS FIRST
+        spi_sequence_lib::push_single(txn);     // Then start transfer
 
         // --- NEW: Test R25 (Held for duration) ---
         // Change CLK_DIV mid-transfer via APB. SCLK period should NOT change!
@@ -152,14 +153,12 @@ class clk_div_corner_test;
         $display("[INFO] clk_div_corner_test: starting");
 
         // Loop 15 times, letting the constraints pick random corner clock dividers
+        // We exclude 65535 here to prevent it from randomly rolling multiple times
+        // and causing a 10_000_000 ns simulation timeout. We will manually test it once below.
         for (int i=0; i<15; i++) begin
-            if (!rand_txn.randomize()) $fatal(1, "Failed to randomize clkdiv txn");
+            if (!rand_txn.randomize() with { clk_div != 16'd65535; }) $fatal(1, "Failed to randomize clkdiv txn");
             
-            if (rand_txn.clk_div == 16'd65535) begin
-                test_65535(ref_model, coverage);
-            end else begin
-                do_clkdiv_xfer($sformatf("rand_clk_%0d", i), rand_txn.clk_div, ref_model, coverage);
-            end
+            do_clkdiv_xfer($sformatf("rand_clk_%0d", i), rand_txn.clk_div, ref_model, coverage);
         end
 
         // Ensure we hit the 65535 specifically at least once just in case
