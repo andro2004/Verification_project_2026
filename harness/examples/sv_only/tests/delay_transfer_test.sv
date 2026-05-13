@@ -147,6 +147,21 @@ class delay_transfer_test;
     endtask
 
     // -------------------------------------------------------------------------
+    // wait_for_rx_ready - polls STATUS.RX_EMPTY until data is visible
+    // -------------------------------------------------------------------------
+    static task wait_for_rx_ready();
+        bit [31:0] st;
+        int        w = 500000;
+        tb_top.u_apb_bfm.apb_read(SL_STATUS, st);
+        while (st[4] && w-- > 0) begin
+            @(posedge tb_top.PCLK); #1;
+            tb_top.u_apb_bfm.apb_read(SL_STATUS, st);
+        end
+        if (w <= 0)
+            $display("[CHECKER_ERROR] delay_transfer_test: wait_for_rx_ready timeout");
+    endtask
+
+    // -------------------------------------------------------------------------
     // configure_dut
     //   Writes CLK_DIV, DELAY, INT_EN, CTRL to both APB BFM and ref-model.
     //   Does NOT push TX data or assert SS.
@@ -293,12 +308,7 @@ class delay_transfer_test;
                 ref_model.check_sclk_period(sclk_period_pclk);
             end
 
-            // 6b. Wait past word-1 entirely, with margin
-            //     word-1 duration = bits_per_word * 2 * half_period_pclk PCLK
-            repeat (bits_per_word * 2 * half_period_pclk + 4 * half_period_pclk)
-                @(posedge tb_top.PCLK);
-
-            // 6c. Measure the idle gap between word-1 and word-2
+            // 6b. Measure the idle gap directly from the transfer boundary.
             measure_gap(cpol, gap_pclk);
 
             // Round to nearest half-cycle to absorb ±1 PCLK edge jitter
@@ -312,6 +322,10 @@ class delay_transfer_test;
 
         // ---- 7. Wait for both transfers to complete ------------------------
         wait_busy_clear();
+
+        // Allow the DUT time to finish internal RX push / status updates.
+        repeat (100) @(posedge tb_top.PCLK);
+        wait_for_rx_ready();
 
         // ---- 8. Deassert SS ------------------------------------------------
         tb_top.u_apb_bfm.apb_write(SL_SS_CTRL, 32'h0000_0000);
@@ -412,6 +426,10 @@ class delay_transfer_test;
         // ---- 7. Wait, deassert SS, drain RX ---------------------------------
         wait_busy_clear();
 
+        // Give the DUT time to settle before reading RX_DATA.
+        repeat (100) @(posedge tb_top.PCLK);
+        wait_for_rx_ready();
+
         tb_top.u_apb_bfm.apb_write(SL_SS_CTRL, 32'h0000_0000);
         tb_top.u_ref.apb_write     (SL_SS_CTRL, 32'h0000_0000);
 
@@ -441,13 +459,13 @@ class delay_transfer_test;
         spi_sequence_lib::reset_dut();
         ref_model.reset();
         run_delay_subtest(8'd0,   16'd3, 2'b00, 1'b0, 2'b00,
-                          "A-delay0-8b",    ref_model, coverage);
+                  "A-delay0-8b",    ref_model, coverage);
 
         // Sub-test B: DELAY=1, DIV=2, 8-bit, mode-0
         spi_sequence_lib::reset_dut();
         ref_model.reset();
         run_delay_subtest(8'd1,   16'd2, 2'b00, 1'b0, 2'b00,
-                          "B-delay1-8b",    ref_model, coverage);
+                  "B-delay1-8b",    ref_model, coverage);
 
         // Sub-test C: DELAY=8, DIV=1, 8-bit, mode-0
         // delay_cfg=8 violates spi_txn.c_delay_sane [0:7], so we bypass
@@ -455,14 +473,14 @@ class delay_transfer_test;
         spi_sequence_lib::reset_dut();
         ref_model.reset();
         run_delay_subtest(8'd8,   16'd1, 2'b00, 1'b0, 2'b00,
-                          "C-delay8-8b",    ref_model, coverage);
+                  "C-delay8-8b",    ref_model, coverage);
 
         // Sub-test D: DELAY=128, DIV=0, 8-bit, mode-0
         // Hits coverage bin delay_large (>=128) and DIV=0 corner simultaneously
         spi_sequence_lib::reset_dut();
         ref_model.reset();
         run_delay_subtest(8'd128, 16'd0, 2'b00, 1'b0, 2'b00,
-                          "D-delay128-8b",  ref_model, coverage);
+                  "D-delay128-8b",  ref_model, coverage);
 
         // Sub-test E: R24 + R25 dedicated sub-test
         spi_sequence_lib::reset_dut();
