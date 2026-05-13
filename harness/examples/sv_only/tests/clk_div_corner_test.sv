@@ -28,6 +28,7 @@ class clk_div_corner_test;
         spi_sequence_lib::reset_dut();
         ref_model.reset();
 
+
         // Build transaction
         txn = new();
         txn.mode       = 2'b00;
