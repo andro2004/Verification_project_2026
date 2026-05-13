@@ -1,0 +1,713 @@
+COVERGROUP COVERAGE:
+----------------------------------------------------------------------------------------------------------
+Covergroup                                             Metric       Goal       Bins    Status               
+                                                                                                         
+----------------------------------------------------------------------------------------------------------
+ TYPE /tb_top_sv_unit/spi_coverage_col/cg_config       70.83%        100          -    Uncovered            
+    covered/total bins:                                    30         55          -                      
+    missing/total bins:                                    25         55          -                      
+    % Hit:                                             54.54%        100          -                      
+    type_option.weight=1
+    type_option.goal=100
+    type_option.comment=
+    type_option.strobe=0
+    type_option.merge_instances=auto(1)
+    Coverpoint cp_mode                                100.00%        100          -    Covered              
+        covered/total bins:                                 4          4          -                      
+        missing/total bins:                                 0          4          -                      
+        % Hit:                                        100.00%        100          -                      
+        type_option.weight=1
+        type_option.goal=100
+        type_option.comment=
+        bin modes[0]                                        6          1          -    Covered              
+        bin modes[1]                                        1          1          -    Covered              
+        bin modes[2]                                        1          1          -    Covered              
+        bin modes[3]                                        2          1          -    Covered              
+    Coverpoint cp_first                               100.00%        100          -    Covered              
+        covered/total bins:                                 2          2          -                      
+        missing/total bins:                                 0          2          -                      
+        % Hit:                                        100.00%        100          -                      
+        type_option.weight=1
+        type_option.goal=100
+        type_option.comment=
+        bin msb_first                                       7          1          -    Covered              
+        bin lsb_first                                       3          1          -    Covered              
+    Coverpoint cp_width                               100.00%        100          -    Covered              
+        covered/total bins:                                 3          3          -                      
+        missing/total bins:                                 0          3          -                      
+        % Hit:                                        100.00%        100          -                      
+        type_option.weight=1
+        type_option.goal=100
+        type_option.comment=
+        illegal_bin reserved                                0                     -    ZERO                 
+        bin w8                                              6          1          -    Covered              
+        bin w16                                             2          1          -    Covered              
+        bin w32                                             2          1          -    Covered              
+    Coverpoint cp_loopback                             50.00%        100          -    Uncovered            
+        covered/total bins:                                 1          2          -                      
+        missing/total bins:                                 1          2          -                      
+        % Hit:                                         50.00%        100          -                      
+        type_option.weight=1
+        type_option.goal=100
+        type_option.comment=
+        bin loopback_off                                    0          1          -    ZERO                 
+        bin loopback_on                                    10          1          -    Covered              
+    Cross cx_mode_width                                58.33%        100          -    Uncovered            
+        covered/total bins:                                 7         12          -                      
+        missing/total bins:                                 5         12          -                      
+        % Hit:                                         58.33%        100          -                      
+        type_option.weight=1
+        type_option.goal=100
+        type_option.comment=
+        Auto, Default and User Defined Bins:
+            bin <modes[3],w32>                              1          1          -    Covered              
+            bin <modes[0],w32>                              1          1          -    Covered              
+            bin <modes[0],w16>                              2          1          -    Covered              
+            bin <modes[3],w8>                               1          1          -    Covered              
+            bin <modes[2],w8>                               1          1          -    Covered              
+            bin <modes[1],w8>                               1          1          -    Covered              
+            bin <modes[0],w8>                               3          1          -    Covered              
+            bin <modes[2],w32>                              0          1          1    ZERO                 
+            bin <modes[1],w32>                              0          1          1    ZERO                 
+            bin <modes[3],w16>                              0          1          1    ZERO                 
+            bin <modes[2],w16>                              0          1          1    ZERO                 
+            bin <modes[1],w16>                              0          1          1    ZERO                 
+    Cross cx_mode_width_order                          37.50%        100          -    Uncovered            
+        covered/total bins:                                 9         24          -                      
+        missing/total bins:                                15         24          -                      
+        % Hit:                                         37.50%        100          -                      
+        type_option.weight=1
+        type_option.goal=100
+        type_option.comment=
+        Auto, Default and User Defined Bins:
+            bin <modes[3],w32,lsb_first>                    1          1          -    Covered              
+            bin <modes[0],w16,lsb_first>                    1          1          -    Covered              
+            bin <modes[0],w8,lsb_first>                     1          1          -    Covered              
+            bin <modes[0],w32,msb_first>                    1          1          -    Covered              
+            bin <modes[0],w16,msb_first>                    1          1          -    Covered              
+            bin <modes[3],w8,msb_first>                     1          1          -    Covered              
+            bin <modes[2],w8,msb_first>                     1          1          -    Covered              
+            bin <modes[1],w8,msb_first>                     1          1          -    Covered              
+            bin <modes[0],w8,msb_first>                     2          1          -    Covered              
+            bin <modes[2],w32,*>                            0          1          2    ZERO                 
+            bin <modes[1],w32,*>                            0          1          2    ZERO                 
+            bin <modes[3],w16,*>                            0          1          2    ZERO                 
+            bin <modes[2],w16,*>                            0          1          2    ZERO                 
+            bin <modes[1],w16,*>                            0          1          2    ZERO                 
+            bin <modes[2],*,lsb_first>                      0          1          3    ZERO                 
+            bin <modes[1],*,lsb_first>                      0          1          3    ZERO                 
+            bin <modes[0],w32,lsb_first>                    0          1          1    ZERO                 
+            bin <modes[3],w8,lsb_first>                     0          1          1    ZERO                 
+            bin <modes[3],w32,msb_first>                    0          1          1    ZERO                 
+    Cross cx_loopback_mode                             50.00%        100          -    Uncovered            
+        covered/total bins:                                 4          8          -                      
+        missing/total bins:                                 4          8          -                      
+        % Hit:                                         50.00%        100          -                      
+        type_option.weight=1
+        type_option.goal=100
+        type_option.comment=
+        Auto, Default and User Defined Bins:
+            bin <loopback_on,modes[3]>                      2          1          -    Covered              
+            bin <loopback_on,modes[2]>                      1          1          -    Covered              
+            bin <loopback_on,modes[1]>                      1          1          -    Covered              
+            bin <loopback_on,modes[0]>                      6          1          -    Covered              
+            bin <loopback_off,*>                            0          1          4    ZERO                 
+ Covergroup instance \/tb_top_sv_unit::spi_coverage_col::cg_config  
+                                                       70.83%        100          -    Uncovered            
+    covered/total bins:                                    30         55          -                      
+    missing/total bins:                                    25         55          -                      
+    % Hit:                                             54.54%        100          -                      
+    option.name=\/tb_top_sv_unit::spi_coverage_col::cg_config 
+    option.weight=1
+    option.goal=100
+    option.comment=
+    option.at_least=1
+    option.auto_bin_max=64
+    option.cross_num_print_missing=0
+    option.detect_overlap=0
+    option.per_instance=1
+    option.get_inst_coverage=0
+    Coverpoint cp_mode                                100.00%        100          -    Covered              
+        covered/total bins:                                 4          4          -                      
+        missing/total bins:                                 0          4          -                      
+        % Hit:                                        100.00%        100          -                      
+        option.weight=1
+        option.goal=100
+        option.comment=
+        option.at_least=1
+        option.auto_bin_max=64
+        option.detect_overlap=0
+        bin modes[0]                                        6          1          -    Covered              
+        bin modes[1]                                        1          1          -    Covered              
+        bin modes[2]                                        1          1          -    Covered              
+        bin modes[3]                                        2          1          -    Covered              
+    Coverpoint cp_first                               100.00%        100          -    Covered              
+        covered/total bins:                                 2          2          -                      
+        missing/total bins:                                 0          2          -                      
+        % Hit:                                        100.00%        100          -                      
+        option.weight=1
+        option.goal=100
+        option.comment=
+        option.at_least=1
+        option.auto_bin_max=64
+        option.detect_overlap=0
+        bin msb_first                                       7          1          -    Covered              
+        bin lsb_first                                       3          1          -    Covered              
+    Coverpoint cp_width                               100.00%        100          -    Covered              
+        covered/total bins:                                 3          3          -                      
+        missing/total bins:                                 0          3          -                      
+        % Hit:                                        100.00%        100          -                      
+        option.weight=1
+        option.goal=100
+        option.comment=
+        option.at_least=1
+        option.auto_bin_max=64
+        option.detect_overlap=0
+        illegal_bin reserved                                0                     -    ZERO                 
+        bin w8                                              6          1          -    Covered              
+        bin w16                                             2          1          -    Covered              
+        bin w32                                             2          1          -    Covered              
+    Coverpoint cp_loopback                             50.00%        100          -    Uncovered            
+        covered/total bins:                                 1          2          -                      
+        missing/total bins:                                 1          2          -                      
+        % Hit:                                         50.00%        100          -                      
+        option.weight=1
+        option.goal=100
+        option.comment=
+        option.at_least=1
+        option.auto_bin_max=64
+        option.detect_overlap=0
+        bin loopback_off                                    0          1          -    ZERO                 
+        bin loopback_on                                    10          1          -    Covered              
+    Cross cx_mode_width                                58.33%        100          -    Uncovered            
+        covered/total bins:                                 7         12          -                      
+        missing/total bins:                                 5         12          -                      
+        % Hit:                                         58.33%        100          -                      
+        option.weight=1
+        option.goal=100
+        option.comment=
+        option.at_least=1
+        option.cross_num_print_missing=0
+        Auto, Default and User Defined Bins:
+            bin <modes[3],w32>                              1          1          -    Covered              
+            bin <modes[0],w32>                              1          1          -    Covered              
+            bin <modes[0],w16>                              2          1          -    Covered              
+            bin <modes[3],w8>                               1          1          -    Covered              
+            bin <modes[2],w8>                               1          1          -    Covered              
+            bin <modes[1],w8>                               1          1          -    Covered              
+            bin <modes[0],w8>                               3          1          -    Covered              
+            bin <modes[2],w32>                              0          1          1    ZERO                 
+            bin <modes[1],w32>                              0          1          1    ZERO                 
+            bin <modes[3],w16>                              0          1          1    ZERO                 
+            bin <modes[2],w16>                              0          1          1    ZERO                 
+            bin <modes[1],w16>                              0          1          1    ZERO                 
+    Cross cx_mode_width_order                          37.50%        100          -    Uncovered            
+        covered/total bins:                                 9         24          -                      
+        missing/total bins:                                15         24          -                      
+        % Hit:                                         37.50%        100          -                      
+        option.weight=1
+        option.goal=100
+        option.comment=
+        option.at_least=1
+        option.cross_num_print_missing=0
+        Auto, Default and User Defined Bins:
+            bin <modes[3],w32,lsb_first>                    1          1          -    Covered              
+            bin <modes[0],w16,lsb_first>                    1          1          -    Covered              
+            bin <modes[0],w8,lsb_first>                     1          1          -    Covered              
+            bin <modes[0],w32,msb_first>                    1          1          -    Covered              
+            bin <modes[0],w16,msb_first>                    1          1          -    Covered              
+            bin <modes[3],w8,msb_first>                     1          1          -    Covered              
+            bin <modes[2],w8,msb_first>                     1          1          -    Covered              
+            bin <modes[1],w8,msb_first>                     1          1          -    Covered              
+            bin <modes[0],w8,msb_first>                     2          1          -    Covered              
+            bin <modes[2],w32,*>                            0          1          2    ZERO                 
+            bin <modes[1],w32,*>                            0          1          2    ZERO                 
+            bin <modes[3],w16,*>                            0          1          2    ZERO                 
+            bin <modes[2],w16,*>                            0          1          2    ZERO                 
+            bin <modes[1],w16,*>                            0          1          2    ZERO                 
+            bin <modes[2],*,lsb_first>                      0          1          3    ZERO                 
+            bin <modes[1],*,lsb_first>                      0          1          3    ZERO                 
+            bin <modes[0],w32,lsb_first>                    0          1          1    ZERO                 
+            bin <modes[3],w8,lsb_first>                     0          1          1    ZERO                 
+            bin <modes[3],w32,msb_first>                    0          1          1    ZERO                 
+    Cross cx_loopback_mode                             50.00%        100          -    Uncovered            
+        covered/total bins:                                 4          8          -                      
+        missing/total bins:                                 4          8          -                      
+        % Hit:                                         50.00%        100          -                      
+        option.weight=1
+        option.goal=100
+        option.comment=
+        option.at_least=1
+        option.cross_num_print_missing=0
+        Auto, Default and User Defined Bins:
+            bin <loopback_on,modes[3]>                      2          1          -    Covered              
+            bin <loopback_on,modes[2]>                      1          1          -    Covered              
+            bin <loopback_on,modes[1]>                      1          1          -    Covered              
+            bin <loopback_on,modes[0]>                      6          1          -    Covered              
+            bin <loopback_off,*>                            0          1          4    ZERO                 
+ TYPE /tb_top_sv_unit/spi_coverage_col/cg_clkdiv        0.00%        100          -    ZERO                 
+    covered/total bins:                                     0          7          -                      
+    missing/total bins:                                     7          7          -                      
+    % Hit:                                              0.00%        100          -                      
+    type_option.weight=1
+    type_option.goal=100
+    type_option.comment=
+    type_option.strobe=0
+    type_option.merge_instances=auto(1)
+    Coverpoint cp_div                                   0.00%        100          -    ZERO                 
+        covered/total bins:                                 0          7          -                      
+        missing/total bins:                                 7          7          -                      
+        % Hit:                                          0.00%        100          -                      
+        type_option.weight=1
+        type_option.goal=100
+        type_option.comment=
+        bin div_0                                           0          1          -    ZERO                 
+        bin div_1                                           0          1          -    ZERO                 
+        bin div_2                                           0          1          -    ZERO                 
+        bin div_3                                           0          1          -    ZERO                 
+        bin div_255                                         0          1          -    ZERO                 
+        bin div_1024                                        0          1          -    ZERO                 
+        bin div_65535                                       0          1          -    ZERO                 
+        default bin div_other                               0                     -    ZERO                 
+ Covergroup instance \/tb_top_sv_unit::spi_coverage_col::cg_clkdiv  
+                                                        0.00%        100          -    ZERO                 
+    covered/total bins:                                     0          7          -                      
+    missing/total bins:                                     7          7          -                      
+    % Hit:                                              0.00%        100          -                      
+    option.name=\/tb_top_sv_unit::spi_coverage_col::cg_clkdiv 
+    option.weight=1
+    option.goal=100
+    option.comment=
+    option.at_least=1
+    option.auto_bin_max=64
+    option.cross_num_print_missing=0
+    option.detect_overlap=0
+    option.per_instance=1
+    option.get_inst_coverage=0
+    Coverpoint cp_div                                   0.00%        100          -    ZERO                 
+        covered/total bins:                                 0          7          -                      
+        missing/total bins:                                 7          7          -                      
+        % Hit:                                          0.00%        100          -                      
+        option.weight=1
+        option.goal=100
+        option.comment=
+        option.at_least=1
+        option.auto_bin_max=64
+        option.detect_overlap=0
+        bin div_0                                           0          1          -    ZERO                 
+        bin div_1                                           0          1          -    ZERO                 
+        bin div_2                                           0          1          -    ZERO                 
+        bin div_3                                           0          1          -    ZERO                 
+        bin div_255                                         0          1          -    ZERO                 
+        bin div_1024                                        0          1          -    ZERO                 
+        bin div_65535                                       0          1          -    ZERO                 
+        default bin div_other                               0                     -    ZERO                 
+ TYPE /tb_top_sv_unit/spi_coverage_col/cg_fifo          0.00%        100          -    ZERO                 
+    covered/total bins:                                     0         10          -                      
+    missing/total bins:                                    10         10          -                      
+    % Hit:                                              0.00%        100          -                      
+    type_option.weight=1
+    type_option.goal=100
+    type_option.comment=
+    type_option.strobe=0
+    type_option.merge_instances=auto(1)
+    Coverpoint cp_tx_occ                                0.00%        100          -    ZERO                 
+        covered/total bins:                                 0          5          -                      
+        missing/total bins:                                 5          5          -                      
+        % Hit:                                          0.00%        100          -                      
+        type_option.weight=1
+        type_option.goal=100
+        type_option.comment=
+        bin tx_empty                                        0          1          -    ZERO                 
+        bin tx_one                                          0          1          -    ZERO                 
+        bin tx_mid                                          0          1          -    ZERO                 
+        bin tx_near_full                                    0          1          -    ZERO                 
+        bin tx_full                                         0          1          -    ZERO                 
+    Coverpoint cp_rx_occ                                0.00%        100          -    ZERO                 
+        covered/total bins:                                 0          5          -                      
+        missing/total bins:                                 5          5          -                      
+        % Hit:                                          0.00%        100          -                      
+        type_option.weight=1
+        type_option.goal=100
+        type_option.comment=
+        bin rx_empty                                        0          1          -    ZERO                 
+        bin rx_one                                          0          1          -    ZERO                 
+        bin rx_mid                                          0          1          -    ZERO                 
+        bin rx_near_full                                    0          1          -    ZERO                 
+        bin rx_full                                         0          1          -    ZERO                 
+ Covergroup instance \/tb_top_sv_unit::spi_coverage_col::cg_fifo  
+                                                        0.00%        100          -    ZERO                 
+    covered/total bins:                                     0         10          -                      
+    missing/total bins:                                    10         10          -                      
+    % Hit:                                              0.00%        100          -                      
+    option.name=\/tb_top_sv_unit::spi_coverage_col::cg_fifo 
+    option.weight=1
+    option.goal=100
+    option.comment=
+    option.at_least=1
+    option.auto_bin_max=64
+    option.cross_num_print_missing=0
+    option.detect_overlap=0
+    option.per_instance=1
+    option.get_inst_coverage=0
+    Coverpoint cp_tx_occ                                0.00%        100          -    ZERO                 
+        covered/total bins:                                 0          5          -                      
+        missing/total bins:                                 5          5          -                      
+        % Hit:                                          0.00%        100          -                      
+        option.weight=1
+        option.goal=100
+        option.comment=
+        option.at_least=1
+        option.auto_bin_max=64
+        option.detect_overlap=0
+        bin tx_empty                                        0          1          -    ZERO                 
+        bin tx_one                                          0          1          -    ZERO                 
+        bin tx_mid                                          0          1          -    ZERO                 
+        bin tx_near_full                                    0          1          -    ZERO                 
+        bin tx_full                                         0          1          -    ZERO                 
+    Coverpoint cp_rx_occ                                0.00%        100          -    ZERO                 
+        covered/total bins:                                 0          5          -                      
+        missing/total bins:                                 5          5          -                      
+        % Hit:                                          0.00%        100          -                      
+        option.weight=1
+        option.goal=100
+        option.comment=
+        option.at_least=1
+        option.auto_bin_max=64
+        option.detect_overlap=0
+        bin rx_empty                                        0          1          -    ZERO                 
+        bin rx_one                                          0          1          -    ZERO                 
+        bin rx_mid                                          0          1          -    ZERO                 
+        bin rx_near_full                                    0          1          -    ZERO                 
+        bin rx_full                                         0          1          -    ZERO                 
+ TYPE /tb_top_sv_unit/spi_coverage_col/cg_delay         0.00%        100          -    ZERO                 
+    covered/total bins:                                     0          3          -                      
+    missing/total bins:                                     3          3          -                      
+    % Hit:                                              0.00%        100          -                      
+    type_option.weight=1
+    type_option.goal=100
+    type_option.comment=
+    type_option.strobe=0
+    type_option.merge_instances=auto(1)
+    Coverpoint cp_delay                                 0.00%        100          -    ZERO                 
+        covered/total bins:                                 0          3          -                      
+        missing/total bins:                                 3          3          -                      
+        % Hit:                                          0.00%        100          -                      
+        type_option.weight=1
+        type_option.goal=100
+        type_option.comment=
+        bin delay_0                                         0          1          -    ZERO                 
+        bin delay_1                                         0          1          -    ZERO                 
+        bin delay_large                                     0          1          -    ZERO                 
+ Covergroup instance \/tb_top_sv_unit::spi_coverage_col::cg_delay  
+                                                        0.00%        100          -    ZERO                 
+    covered/total bins:                                     0          3          -                      
+    missing/total bins:                                     3          3          -                      
+    % Hit:                                              0.00%        100          -                      
+    option.name=\/tb_top_sv_unit::spi_coverage_col::cg_delay 
+    option.weight=1
+    option.goal=100
+    option.comment=
+    option.at_least=1
+    option.auto_bin_max=64
+    option.cross_num_print_missing=0
+    option.detect_overlap=0
+    option.per_instance=1
+    option.get_inst_coverage=0
+    Coverpoint cp_delay                                 0.00%        100          -    ZERO                 
+        covered/total bins:                                 0          3          -                      
+        missing/total bins:                                 3          3          -                      
+        % Hit:                                          0.00%        100          -                      
+        option.weight=1
+        option.goal=100
+        option.comment=
+        option.at_least=1
+        option.auto_bin_max=64
+        option.detect_overlap=0
+        bin delay_0                                         0          1          -    ZERO                 
+        bin delay_1                                         0          1          -    ZERO                 
+        bin delay_large                                     0          1          -    ZERO                 
+ TYPE /tb_top_sv_unit/spi_coverage_col/cg_interrupt 
+                                                        0.00%        100          -    ZERO                 
+    covered/total bins:                                     0         35          -                      
+    missing/total bins:                                    35         35          -                      
+    % Hit:                                              0.00%        100          -                      
+    type_option.weight=1
+    type_option.goal=100
+    type_option.comment=
+    type_option.strobe=0
+    type_option.merge_instances=auto(1)
+    Coverpoint cp_int_stat                              0.00%        100          -    ZERO                 
+        covered/total bins:                                 0          8          -                      
+        missing/total bins:                                 8          8          -                      
+        % Hit:                                          0.00%        100          -                      
+        type_option.weight=1
+        type_option.goal=100
+        type_option.comment=
+        bin all_clear                                       0          1          -    ZERO                 
+        bin tx_empty                                        0          1          -    ZERO                 
+        bin rx_full                                         0          1          -    ZERO                 
+        bin tx_ovf                                          0          1          -    ZERO                 
+        bin rx_ovf                                          0          1          -    ZERO                 
+        bin xfer_done                                       0          1          -    ZERO                 
+        bin multiple                                        0          1          -    ZERO                 
+        bin all_set                                         0          1          -    ZERO                 
+    Coverpoint cp_int_en                                0.00%        100          -    ZERO                 
+        covered/total bins:                                 0          3          -                      
+        missing/total bins:                                 3          3          -                      
+        % Hit:                                          0.00%        100          -                      
+        type_option.weight=1
+        type_option.goal=100
+        type_option.comment=
+        bin all_masked                                      0          1          -    ZERO                 
+        bin all_enabled                                     0          1          -    ZERO                 
+        bin partial                                         0          1          -    ZERO                 
+    Cross cx_stat_en                                    0.00%        100          -    ZERO                 
+        covered/total bins:                                 0         24          -                      
+        missing/total bins:                                24         24          -                      
+        % Hit:                                          0.00%        100          -                      
+        type_option.weight=1
+        type_option.goal=100
+        type_option.comment=
+        Auto, Default and User Defined Bins:
+            bin <*,*>                                       0          1         24    ZERO                 
+ Covergroup instance \/tb_top_sv_unit::spi_coverage_col::cg_interrupt  
+                                                        0.00%        100          -    ZERO                 
+    covered/total bins:                                     0         35          -                      
+    missing/total bins:                                    35         35          -                      
+    % Hit:                                              0.00%        100          -                      
+    option.name=\/tb_top_sv_unit::spi_coverage_col::cg_interrupt 
+    option.weight=1
+    option.goal=100
+    option.comment=
+    option.at_least=1
+    option.auto_bin_max=64
+    option.cross_num_print_missing=0
+    option.detect_overlap=0
+    option.per_instance=1
+    option.get_inst_coverage=0
+    Coverpoint cp_int_stat                              0.00%        100          -    ZERO                 
+        covered/total bins:                                 0          8          -                      
+        missing/total bins:                                 8          8          -                      
+        % Hit:                                          0.00%        100          -                      
+        option.weight=1
+        option.goal=100
+        option.comment=
+        option.at_least=1
+        option.auto_bin_max=64
+        option.detect_overlap=0
+        bin all_clear                                       0          1          -    ZERO                 
+        bin tx_empty                                        0          1          -    ZERO                 
+        bin rx_full                                         0          1          -    ZERO                 
+        bin tx_ovf                                          0          1          -    ZERO                 
+        bin rx_ovf                                          0          1          -    ZERO                 
+        bin xfer_done                                       0          1          -    ZERO                 
+        bin multiple                                        0          1          -    ZERO                 
+        bin all_set                                         0          1          -    ZERO                 
+    Coverpoint cp_int_en                                0.00%        100          -    ZERO                 
+        covered/total bins:                                 0          3          -                      
+        missing/total bins:                                 3          3          -                      
+        % Hit:                                          0.00%        100          -                      
+        option.weight=1
+        option.goal=100
+        option.comment=
+        option.at_least=1
+        option.auto_bin_max=64
+        option.detect_overlap=0
+        bin all_masked                                      0          1          -    ZERO                 
+        bin all_enabled                                     0          1          -    ZERO                 
+        bin partial                                         0          1          -    ZERO                 
+    Cross cx_stat_en                                    0.00%        100          -    ZERO                 
+        covered/total bins:                                 0         24          -                      
+        missing/total bins:                                24         24          -                      
+        % Hit:                                          0.00%        100          -                      
+        option.weight=1
+        option.goal=100
+        option.comment=
+        option.at_least=1
+        option.cross_num_print_missing=0
+        Auto, Default and User Defined Bins:
+            bin <*,*>                                       0          1         24    ZERO                 
+ TYPE /tb_top_sv_unit/spi_coverage_col/cg_ss           16.66%        100          -    Uncovered            
+    covered/total bins:                                     1          6          -                      
+    missing/total bins:                                     5          6          -                      
+    % Hit:                                             16.66%        100          -                      
+    type_option.weight=1
+    type_option.goal=100
+    type_option.comment=
+    type_option.strobe=0
+    type_option.merge_instances=auto(1)
+    Coverpoint cp_ss                                   16.66%        100          -    Uncovered            
+        covered/total bins:                                 1          6          -                      
+        missing/total bins:                                 5          6          -                      
+        % Hit:                                         16.66%        100          -                      
+        type_option.weight=1
+        type_option.goal=100
+        type_option.comment=
+        bin ss0_only                                       10          1          -    Covered              
+        bin ss1_only                                        0          1          -    ZERO                 
+        bin ss2_only                                        0          1          -    ZERO                 
+        bin ss3_only                                        0          1          -    ZERO                 
+        bin multi_ss                                        0          1          -    ZERO                 
+        bin none                                            0          1          -    ZERO                 
+ Covergroup instance \/tb_top_sv_unit::spi_coverage_col::cg_ss  
+                                                       16.66%        100          -    Uncovered            
+    covered/total bins:                                     1          6          -                      
+    missing/total bins:                                     5          6          -                      
+    % Hit:                                             16.66%        100          -                      
+    option.name=\/tb_top_sv_unit::spi_coverage_col::cg_ss 
+    option.weight=1
+    option.goal=100
+    option.comment=
+    option.at_least=1
+    option.auto_bin_max=64
+    option.cross_num_print_missing=0
+    option.detect_overlap=0
+    option.per_instance=1
+    option.get_inst_coverage=0
+    Coverpoint cp_ss                                   16.66%        100          -    Uncovered            
+        covered/total bins:                                 1          6          -                      
+        missing/total bins:                                 5          6          -                      
+        % Hit:                                         16.66%        100          -                      
+        option.weight=1
+        option.goal=100
+        option.comment=
+        option.at_least=1
+        option.auto_bin_max=64
+        option.detect_overlap=0
+        bin ss0_only                                       10          1          -    Covered              
+        bin ss1_only                                        0          1          -    ZERO                 
+        bin ss2_only                                        0          1          -    ZERO                 
+        bin ss3_only                                        0          1          -    ZERO                 
+        bin multi_ss                                        0          1          -    ZERO                 
+        bin none                                            0          1          -    ZERO                 
+ TYPE /tb_top_sv_unit/spi_coverage_col/cg_register     53.33%        100          -    Uncovered            
+    covered/total bins:                                    10         32          -                      
+    missing/total bins:                                    22         32          -                      
+    % Hit:                                             31.25%        100          -                      
+    type_option.weight=1
+    type_option.goal=100
+    type_option.comment=
+    type_option.strobe=0
+    type_option.merge_instances=auto(1)
+    Coverpoint cp_addr                                 40.00%        100          -    Uncovered            
+        covered/total bins:                                 4         10          -                      
+        missing/total bins:                                 6         10          -                      
+        % Hit:                                         40.00%        100          -                      
+        type_option.weight=1
+        type_option.goal=100
+        type_option.comment=
+        bin ctrl                                           10          1          -    Covered              
+        bin status                                          0          1          -    ZERO                 
+        bin tx_data                                        10          1          -    Covered              
+        bin rx_data                                        10          1          -    Covered              
+        bin clk_div                                         0          1          -    ZERO                 
+        bin ss_ctrl                                        10          1          -    Covered              
+        bin int_en                                          0          1          -    ZERO                 
+        bin int_stat                                        0          1          -    ZERO                 
+        bin delay                                           0          1          -    ZERO                 
+        bin reserved                                        0          1          -    ZERO                 
+    Coverpoint cp_rw                                  100.00%        100          -    Covered              
+        covered/total bins:                                 2          2          -                      
+        missing/total bins:                                 0          2          -                      
+        % Hit:                                        100.00%        100          -                      
+        type_option.weight=1
+        type_option.goal=100
+        type_option.comment=
+        bin read                                           10          1          -    Covered              
+        bin write                                          30          1          -    Covered              
+    Cross cx_addr_rw                                   20.00%        100          -    Uncovered            
+        covered/total bins:                                 4         20          -                      
+        missing/total bins:                                16         20          -                      
+        % Hit:                                         20.00%        100          -                      
+        type_option.weight=1
+        type_option.goal=100
+        type_option.comment=
+        Auto, Default and User Defined Bins:
+            bin <ss_ctrl,write>                            10          1          -    Covered              
+            bin <tx_data,write>                            10          1          -    Covered              
+            bin <ctrl,write>                               10          1          -    Covered              
+            bin <rx_data,read>                             10          1          -    Covered              
+            bin <reserved,*>                                0          1          2    ZERO                 
+            bin <delay,*>                                   0          1          2    ZERO                 
+            bin <int_stat,*>                                0          1          2    ZERO                 
+            bin <int_en,*>                                  0          1          2    ZERO                 
+            bin <clk_div,*>                                 0          1          2    ZERO                 
+            bin <status,*>                                  0          1          2    ZERO                 
+            bin <rx_data,write>                             0          1          1    ZERO                 
+            bin <ss_ctrl,read>                              0          1          1    ZERO                 
+            bin <tx_data,read>                              0          1          1    ZERO                 
+            bin <ctrl,read>                                 0          1          1    ZERO                 
+ Covergroup instance \/tb_top_sv_unit::spi_coverage_col::cg_register  
+                                                       53.33%        100          -    Uncovered            
+    covered/total bins:                                    10         32          -                      
+    missing/total bins:                                    22         32          -                      
+    % Hit:                                             31.25%        100          -                      
+    option.name=\/tb_top_sv_unit::spi_coverage_col::cg_register 
+    option.weight=1
+    option.goal=100
+    option.comment=
+    option.at_least=1
+    option.auto_bin_max=64
+    option.cross_num_print_missing=0
+    option.detect_overlap=0
+    option.per_instance=1
+    option.get_inst_coverage=0
+    Coverpoint cp_addr                                 40.00%        100          -    Uncovered            
+        covered/total bins:                                 4         10          -                      
+        missing/total bins:                                 6         10          -                      
+        % Hit:                                         40.00%        100          -                      
+        option.weight=1
+        option.goal=100
+        option.comment=
+        option.at_least=1
+        option.auto_bin_max=64
+        option.detect_overlap=0
+        bin ctrl                                           10          1          -    Covered              
+        bin status                                          0          1          -    ZERO                 
+        bin tx_data                                        10          1          -    Covered              
+        bin rx_data                                        10          1          -    Covered              
+        bin clk_div                                         0          1          -    ZERO                 
+        bin ss_ctrl                                        10          1          -    Covered              
+        bin int_en                                          0          1          -    ZERO                 
+        bin int_stat                                        0          1          -    ZERO                 
+        bin delay                                           0          1          -    ZERO                 
+        bin reserved                                        0          1          -    ZERO                 
+    Coverpoint cp_rw                                  100.00%        100          -    Covered              
+        covered/total bins:                                 2          2          -                      
+        missing/total bins:                                 0          2          -                      
+        % Hit:                                        100.00%        100          -                      
+        option.weight=1
+        option.goal=100
+        option.comment=
+        option.at_least=1
+        option.auto_bin_max=64
+        option.detect_overlap=0
+        bin read                                           10          1          -    Covered              
+        bin write                                          30          1          -    Covered              
+    Cross cx_addr_rw                                   20.00%        100          -    Uncovered            
+        covered/total bins:                                 4         20          -                      
+        missing/total bins:                                16         20          -                      
+        % Hit:                                         20.00%        100          -                      
+        option.weight=1
+        option.goal=100
+        option.comment=
+        option.at_least=1
+        option.cross_num_print_missing=0
+        Auto, Default and User Defined Bins:
+            bin <ss_ctrl,write>                            10          1          -    Covered              
+            bin <tx_data,write>                            10          1          -    Covered              
+            bin <ctrl,write>                               10          1          -    Covered              
+            bin <rx_data,read>                             10          1          -    Covered              
+            bin <reserved,*>                                0          1          2    ZERO                 
+            bin <delay,*>                                   0          1          2    ZERO                 
+            bin <int_stat,*>                                0          1          2    ZERO                 
+            bin <int_en,*>                                  0          1          2    ZERO                 
+            bin <clk_div,*>                                 0          1          2    ZERO                 
+            bin <status,*>                                  0          1          2    ZERO                 
+            bin <rx_data,write>                             0          1          1    ZERO                 
+            bin <ss_ctrl,read>                              0          1          1    ZERO                 
+            bin <tx_data,read>                              0          1          1    ZERO                 
+            bin <ctrl,read>                                 0          1          1    ZERO                 
+
+TOTAL COVERGROUP COVERAGE: 20.11%  COVERGROUP TYPES: 7
