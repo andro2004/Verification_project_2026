@@ -39,11 +39,11 @@ module spi_regfile_sva (
     ) else $error("ERROR: a_irq_agg IRQ=%b, calculated=%b (INT_STAT=%b, INT_EN=%b)",
                   IRQ, |(INT_STAT & INT_EN), INT_STAT, INT_EN);
 
-    // When CTRL.EN deasserts, aggregate IRQ MUST be 0 within 1 cycle
-    a_irq_off_when_disabled : assert property (
-        @(posedge PCLK) disable iff (!PRESETn)
-            (!ctrl_en) |-> ##[0:1] (IRQ == 1'b0)
-    ) else $error("ERROR: a_irq_off_when_disabled: IRQ active when CTRL.EN is disabled");
+    // a_irq_off_when_disabled — REMOVED.
+    // Spec §6.1: CTRL.EN=0 flushes FIFOs/resets shifter but does NOT clear
+    // INT_STAT. IRQ = |(INT_STAT & INT_EN) always (R16), so IRQ can legally
+    // remain 1 when ctrl_en=0 if sticky INT_STAT bits are still set.
+    // This assertion has no spec basis and causes confirmed false failures.
 
     // =========================================================================
     // Skeleton Assertions - Implementation Required
@@ -74,13 +74,20 @@ module spi_regfile_sva (
     a_apb_stable_bus: assert property(apb_signals_stable)
         else $error("ERROR: APB control/data bus signals unstable during transfer phase!");
 
-    // a_fifo_no_push_full (Req R13): No push when full (after OVF clear) without explicit OVF assertion.
+    // a_fifo_no_push_full (Req R13): A push while TX FIFO is full must set OVF.
+    //
+    // Fix: original `(FULL && !OVF) |-> !push` fires when the test intentionally
+    // pushes while full to test overflow (error_injection_test scenario 1 & 3).
+    // The assertion is backwards — it was trying to say "don't push when full
+    // without OVF being set", but OVF is SET by the push itself (it can't be
+    // set before the push). The correct check is: if a push occurs while FULL,
+    // OVF must be asserted by the next cycle.
     property fifo_no_push_when_full;
-        @(posedge PCLK)
-        (FULL && !OVF) |-> !push;
+        @(posedge PCLK) disable iff (!PRESETn)
+        (FULL && push) |=> OVF;
     endproperty
     a_fifo_no_push_full: assert property(fifo_no_push_when_full)
-        else $error("ERROR: Prohibited push detected while FIFO is full!");
+        else $error("ERROR: Push while FIFO full did not set OVF!");
     
     // a_apb_zero_ws (Req R22): Check that PREADY always equals 1 (zero wait states).
     a_apb_zero_ws : assert property (@(posedge PCLK) PSEL |-> PREADY)
