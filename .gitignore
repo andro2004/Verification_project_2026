@@ -1,0 +1,19 @@
+# Simulation artifacts
+work/
+transcript
+*.wdb
+*.vcd
+*.fsdb
+*.shm
+.run_tcl
+
+# IDE
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Build outputs
+*.o
+*.a
+*.so
